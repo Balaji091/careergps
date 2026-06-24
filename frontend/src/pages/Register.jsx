@@ -24,8 +24,8 @@ const Register = () => {
 
     try {
       await register(name, email, password);
-      showToast('Registration successful! Please check your email.', 'success');
-      setIsRegistered(true);
+      showToast('Registration successful! You can now log in.', 'success');
+      navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Try again.');
     } finally {

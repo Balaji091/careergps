@@ -37,6 +37,7 @@ export const registerUser = async (req, res) => {
       name,
       email,
       password,
+      isVerified: true, // Bypass verification for now
       verificationToken,
       verificationTokenExpires,
     });
@@ -45,7 +46,8 @@ export const registerUser = async (req, res) => {
     await Streak.create({ user: user._id });
     await Analytics.create({ user: user._id });
 
-    // Send verification email using SMTP
+    // Bypass verification email sending for now
+    /*
     try {
       await sendVerificationEmail(email, name, verificationToken);
     } catch (emailErr) {
@@ -54,9 +56,10 @@ export const registerUser = async (req, res) => {
         message: 'Registration successful, but verification email could not be sent. Please contact support.',
       });
     }
+    */
 
     res.status(201).json({
-      message: 'Registration successful! Please check your email to verify your account.',
+      message: 'Registration successful! You can now log in.',
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -187,7 +190,8 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 1 * 60 * 60 * 1000; // 1 hour
     await user.save();
 
-    // Send password reset email using SMTP
+    // Bypass SMTP password reset email sending for now
+    /*
     try {
       await sendPasswordResetEmail(email, user.name, resetToken);
     } catch (emailErr) {
@@ -196,9 +200,11 @@ export const forgotPassword = async (req, res) => {
         message: 'Failed to send password reset email. Please try again later.',
       });
     }
+    */
 
     res.json({
-      message: 'Password reset link has been sent to your email address.',
+      message: 'Password reset link has been simulated. Check response.',
+      resetToken, // return token directly for bypass
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

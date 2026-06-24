@@ -24,11 +24,14 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+ 
     try {
-      await requestPasswordReset(email);
+      const data = await requestPasswordReset(email);
       setRequested(true);
-      showToast('Password reset email sent!', 'success');
+      showToast('Password reset link simulated!', 'success');
+      if (data.resetToken) {
+        setToken(data.resetToken);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Password reset request failed.');
     } finally {
@@ -118,19 +121,18 @@ const ForgotPassword = () => {
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-[#2563EB]">
               <CheckCircle className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-[#111827] text-sm">Reset Email Dispatched</h3>
+            <h3 className="font-bold text-[#111827] text-sm">Reset Link Simulated</h3>
             <p className="text-xs text-[#6B7280] leading-relaxed">
-              We have sent a password reset link to your email address <strong className="text-[#111827]">{email}</strong>.
+              Password reset link has been simulated. You can update your password below.
             </p>
-            <p className="text-xs text-[#6B7280] leading-relaxed">
-              Please check your inbox and click the reset link to choose a new password.
-            </p>
-            <Link
-              to="/login"
-              className="block w-full py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm"
-            >
-              Back to Sign In
-            </Link>
+            {token && (
+              <button
+                onClick={() => setToken(token)}
+                className="w-full py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm"
+              >
+                Reset Password Now
+              </button>
+            )}
           </div>
         ) : (
           <form onSubmit={handleRequest} className="space-y-4">
