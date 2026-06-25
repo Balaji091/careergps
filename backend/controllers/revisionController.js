@@ -7,7 +7,7 @@ export const getRevisionQueue = async (req, res) => {
   try {
     const revisions = await Revision.find({ user: req.user._id })
       .populate('subject', 'name')
-      .populate('topic', 'name difficulty status');
+      .populate('topic', 'name difficulty status summary cachedLearnContent');
 
     const today = new Date();
     today.setHours(23, 59, 59, 999); // end of today

@@ -51,6 +51,27 @@ export const updateNote = async (req, res) => {
     note.isPinned = isPinned !== undefined ? isPinned : note.isPinned;
     await note.save();
 
+    // Auto-complete topic if note is long enough (>= 100 characters)
+    if (note.content && note.content.trim().length >= 100) {
+      const topic = await Topic.findOne({ _id: topicId, user: req.user._id });
+      if (topic && topic.status !== 'completed') {
+        topic.status = 'completed';
+        topic.progress = 100;
+        await topic.save();
+
+        // Aggregate progress to subject
+        const allTopics = await Topic.find({ subject: topic.subject });
+        const completedCount = allTopics.filter(t => t.status === 'completed').length;
+        const progressPercent = Math.round((completedCount / allTopics.length) * 100);
+        const subject = await Subject.findById(topic.subject);
+        if (subject) {
+          subject.progress = progressPercent;
+          subject.status = progressPercent === 100 ? 'completed' : (progressPercent > 0 ? 'in_progress' : 'not_started');
+          await subject.save();
+        }
+      }
+    }
+
     res.json({ message: 'Note saved successfully', note });
   } catch (error) {
     res.status(500).json({ message: error.message });

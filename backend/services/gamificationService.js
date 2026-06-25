@@ -212,11 +212,27 @@ export const checkAndUnlockAchievements = async (userId) => {
         badgeIcon: 'interview-1',
       });
     }
-    if (completedSubjectsCount >= 1) {
+
+    // Dynamic Subject & Course Certificate achievements
+    const allUserSubjects = await Subject.find({ user: userId });
+    let completedCount = 0;
+    
+    for (const sub of allUserSubjects) {
+      if (sub.status === 'completed') {
+        completedCount++;
+        achievementsToUnlock.push({
+          title: `${sub.name} Master`,
+          description: `Successfully completed all topics in the "${sub.name}" subject module.`,
+          badgeIcon: `subject-${sub._id.toString()}`,
+        });
+      }
+    }
+
+    if (allUserSubjects.length > 0 && completedCount === allUserSubjects.length) {
       achievementsToUnlock.push({
-        title: 'Subject Mastered',
-        description: 'Completed all topics inside your first subject module.',
-        badgeIcon: 'subject-1',
+        title: `Certificate: ${user.profile?.targetRole || 'Software Career Pathway'}`,
+        description: `Official certificate for successfully mastering all modules in the ${user.profile?.targetRole || 'Software Career'} path.`,
+        badgeIcon: 'certificate',
       });
     }
 

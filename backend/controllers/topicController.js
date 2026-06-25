@@ -260,6 +260,25 @@ export const submitTopicQuiz = async (req, res) => {
       await addXP(req.user._id, xpGained, `Completed quiz for topic: ${topic.name}`);
     }
 
+    // Auto complete topic if score >= 3
+    if (score >= 3 && topic.status !== 'completed') {
+      topic.status = 'completed';
+      topic.progress = 100;
+      await topic.save();
+
+      // Aggregate progress up to Subject Level
+      const allTopics = await Topic.find({ subject: topic.subject });
+      const completedCount = allTopics.filter(t => t.status === 'completed').length;
+      const progressPercent = Math.round((completedCount / allTopics.length) * 100);
+
+      const subject = await Subject.findById(topic.subject);
+      if (subject) {
+        subject.progress = progressPercent;
+        subject.status = progressPercent === 100 ? 'completed' : (progressPercent > 0 ? 'in_progress' : 'not_started');
+        await subject.save();
+      }
+    }
+
     // Update Analytics stats
     let analytics = await Analytics.findOne({ user: req.user._id });
     if (!analytics) {
