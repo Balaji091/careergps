@@ -50,6 +50,77 @@ export const getTopicLearnContent = async (req, res) => {
   }
 };
 
+// Centralized topic completion logic
+export const completeTopic = async (topicId, userId) => {
+  const topic = await Topic.findOne({ _id: topicId, user: userId });
+  if (!topic) return null;
+
+  const previousStatus = topic.status || 'not_started';
+  const previousProgress = topic.progress || 0;
+
+  if (previousStatus !== 'completed') {
+    topic.status = 'completed';
+    topic.progress = 100;
+    await topic.save();
+
+    // 1. Aggregating progress up to Subject Level
+    const allTopics = await Topic.find({ subject: topic.subject });
+    const completedCount = allTopics.filter(t => t.status === 'completed').length;
+    const progressPercent = Math.round((completedCount / allTopics.length) * 100);
+
+    const subject = await Subject.findById(topic.subject);
+    if (subject) {
+      subject.progress = progressPercent;
+      if (progressPercent === 100) {
+        subject.status = 'completed';
+      } else if (progressPercent > 0) {
+        subject.status = 'in_progress';
+      } else {
+        subject.status = 'not_started';
+      }
+      await subject.save();
+    }
+
+    // 2. Gamification rewards
+    const xpGained = 20; // Topic completed = 20 XP
+    const topicsDelta = 1;
+    await addXP(userId, xpGained, `Completed topic: ${topic.name}`);
+
+    // 3. Auto-schedule revision
+    const user = await User.findById(userId);
+    if (user && user.profile.autoScheduleRevision !== false) {
+      let revision = await Revision.findOne({ topic: topicId, user: userId });
+      if (!revision) {
+        revision = new Revision({
+          user: userId,
+          subject: topic.subject,
+          topic: topicId,
+        });
+      }
+      
+      revision.status = 'Scheduled';
+      revision.nextRevisionDate = new Date();
+      revision.intervalStep = 0;
+      await revision.save();
+      
+      await Notification.create({
+        user: userId,
+        title: `Revision Scheduled: ${topic.name} 📚`,
+        message: `Great job! '${topic.name}' is now scheduled for revision tomorrow in your Spaced Repetition deck.`,
+        type: 'Revision Due',
+      });
+    }
+
+    // 4. Record study duration and XP update in the daily streak history
+    const hoursDelta = ((100 - previousProgress) / 100) * topic.estimatedHours;
+    await updateStreakActivity(userId, hoursDelta, 0, topicsDelta, xpGained);
+
+    return { topic, xpGained, progressPercent };
+  }
+
+  return { topic, xpGained: 0, progressPercent: 100 };
+};
+
 // Update topic progress & status
 export const updateTopicProgress = async (req, res) => {
   const { topicId } = req.params;
@@ -59,6 +130,18 @@ export const updateTopicProgress = async (req, res) => {
     const topic = await Topic.findOne({ _id: topicId, user: req.user._id });
     if (!topic) {
       return res.status(404).json({ message: 'Topic not found' });
+    }
+
+    if (status === 'completed') {
+      const completionResult = await completeTopic(topicId, req.user._id);
+      if (completionResult) {
+        return res.json({
+          message: 'Topic progress updated successfully',
+          topic: completionResult.topic,
+          subjectProgress: completionResult.progressPercent,
+          xpGained: completionResult.xpGained,
+        });
+      }
     }
 
     const previousProgress = topic.progress || 0;
@@ -91,39 +174,7 @@ export const updateTopicProgress = async (req, res) => {
     let xpGained = 0;
     let topicsDelta = 0;
 
-    if (status === 'completed' && previousStatus !== 'completed') {
-      xpGained = 20; // Topic completed = 20 XP
-      topicsDelta = 1;
-      await addXP(req.user._id, xpGained, `Completed topic: ${topic.name}`);
-
-      // Auto-schedule revision
-      const user = await User.findById(req.user._id);
-      if (user && user.profile.autoScheduleRevision !== false) {
-        let revision = await Revision.findOne({ topic: topicId, user: req.user._id });
-        if (!revision) {
-          revision = new Revision({
-            user: req.user._id,
-            subject: topic.subject,
-            topic: topicId,
-          });
-        }
-        
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        revision.status = 'Scheduled';
-        revision.nextRevisionDate = tomorrow;
-        revision.intervalStep = 0;
-        await revision.save();
-        
-        await Notification.create({
-          user: req.user._id,
-          title: `Revision Scheduled: ${topic.name} 📚`,
-          message: `Great job! '${topic.name}' is now scheduled for revision tomorrow in your Spaced Repetition deck.`,
-          type: 'Revision Due',
-        });
-      }
-    } else if (previousStatus === 'completed' && status !== 'completed') {
+    if (previousStatus === 'completed' && status !== 'completed') {
       xpGained = -20; // Reverted completion = -20 XP
       topicsDelta = -1;
       await addXP(req.user._id, xpGained, `Reverted completion of topic: ${topic.name}`);
@@ -261,25 +312,10 @@ export const submitTopicQuiz = async (req, res) => {
     }
 
     // Auto complete topic if score >= 3
-    if (score >= 3 && topic.status !== 'completed') {
-      topic.status = 'completed';
-      topic.progress = 100;
-      await topic.save();
-
-      // Aggregate progress up to Subject Level
-      const allTopics = await Topic.find({ subject: topic.subject });
-      const completedCount = allTopics.filter(t => t.status === 'completed').length;
-      const progressPercent = Math.round((completedCount / allTopics.length) * 100);
-
-      const subject = await Subject.findById(topic.subject);
-      if (subject) {
-        subject.progress = progressPercent;
-        subject.status = progressPercent === 100 ? 'completed' : (progressPercent > 0 ? 'in_progress' : 'not_started');
-        await subject.save();
-      }
+    if (score >= 3) {
+      await completeTopic(topicId, req.user._id);
     }
 
-    // Update Analytics stats
     let analytics = await Analytics.findOne({ user: req.user._id });
     if (!analytics) {
       analytics = await Analytics.create({ user: req.user._id });

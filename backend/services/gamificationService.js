@@ -51,6 +51,15 @@ export const addXP = async (userId, xpAmount, reason) => {
 
     await user.save();
 
+    if (xpAmount > 0) {
+      await Notification.create({
+        user: userId,
+        title: `+${xpAmount} XP Earned! ⚡`,
+        message: reason || 'Completed learning activity.',
+        type: 'Daily Goal Reminder',
+      });
+    }
+
     if (leveledUp) {
       await Notification.create({
         user: userId,

@@ -11,6 +11,65 @@ const Layout = ({ children }) => {
   const [streak, setStreak] = useState(0);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  const [prevXp, setPrevXp] = useState(user?.xp);
+  const [prevLevel, setPrevLevel] = useState(user?.level);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+
+  const fetchNotifications = async () => {
+    if (user) {
+      try {
+        const res = await api.get('/notifications');
+        const dbNotifs = res.data || [];
+        const mapped = dbNotifs.map(n => {
+          let icon = 'notifications';
+          let color = 'bg-primary/10 text-primary';
+          
+          if (n.type === 'Revision Due') {
+            icon = 'menu_book';
+            color = 'bg-amber-100 text-amber-700';
+          } else if (n.type === 'Streak Risk') {
+            icon = 'warning';
+            color = 'bg-red-100 text-red-700';
+          } else if (n.type === 'Task Pending') {
+            icon = 'pending_actions';
+            color = 'bg-blue-100 text-blue-700';
+          } else if (n.type === 'Daily Goal Reminder' || n.type === 'XP Earned') {
+            icon = 'emoji_events';
+            color = 'bg-emerald-100 text-emerald-700';
+          }
+
+          const formatTimeAgo = (dateStr) => {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours}h ago`;
+            const diffDays = Math.floor(diffHours / 24);
+            if (diffDays === 1) return 'Yesterday';
+            return `${diffDays}d ago`;
+          };
+
+          return {
+            id: n._id,
+            title: n.title,
+            description: n.message,
+            read: n.isRead,
+            icon,
+            color,
+            time: formatTimeAgo(n.createdAt)
+          };
+        });
+        setNotifications(mapped);
+      } catch (err) {
+        console.log('Failed to fetch notifications', err);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchStreak = async () => {
       if (user) {
@@ -23,10 +82,34 @@ const Layout = ({ children }) => {
       }
     };
     fetchStreak();
+    fetchNotifications();
 
-    window.addEventListener('profile-reloaded', fetchStreak);
-    return () => window.removeEventListener('profile-reloaded', fetchStreak);
+    const handleProfileReload = () => {
+      fetchStreak();
+      fetchNotifications();
+    };
+
+    window.addEventListener('profile-reloaded', handleProfileReload);
+    return () => window.removeEventListener('profile-reloaded', handleProfileReload);
   }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      if (prevXp !== undefined && user.xp > prevXp) {
+        const diff = user.xp - prevXp;
+        setToastMsg(`+${diff} XP Earned! ⚡`);
+        fetchNotifications();
+        setTimeout(() => setToastMsg(null), 3000);
+      }
+      if (prevLevel !== undefined && user.level > prevLevel) {
+        setToastMsg(`Level Up! Reached Level ${user.level} 🎉`);
+        fetchNotifications();
+        setTimeout(() => setToastMsg(null), 4000);
+      }
+      setPrevXp(user.xp);
+      setPrevLevel(user.level);
+    }
+  }, [user?.xp, user?.level]);
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -41,8 +124,6 @@ const Layout = ({ children }) => {
 
   const userInitials = getInitials(user?.name);
   const [showNotifications, setShowNotifications] = useState(false);
-
-  const [notifications, setNotifications] = useState([]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -63,6 +144,13 @@ const Layout = ({ children }) => {
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col md:flex-row relative">
+      {/* Global XP Toast Alert */}
+      {toastMsg && (
+        <div className="fixed top-20 right-6 bg-primary text-white px-4 py-3 rounded-lg shadow-xl z-[100] animate-bounce flex items-center gap-2 border border-white/20">
+          <span className="material-symbols-outlined text-yellow-400">stars</span>
+          <span className="font-label-md text-label-md font-bold">{toastMsg}</span>
+        </div>
+      )}
       {/* Navigation Drawer (Desktop Sidebar) */}
       <aside className="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant/20 p-6 space-y-stack-md z-50">
         <div className="mb-8">
@@ -145,8 +233,14 @@ const Layout = ({ children }) => {
                     <span className="font-bold text-xs text-on-surface">Notifications</span>
                     {unreadCount > 0 && (
                       <button 
-                        onClick={() => {
-                          setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                        onClick={async () => {
+                          const unreads = notifications.filter(n => !n.read);
+                          try {
+                            await Promise.all(unreads.map(n => api.put(`/notifications/${n.id}/read`)));
+                            setNotifications(prev => prev.map(item => ({ ...item, read: true })));
+                          } catch (err) {
+                            console.log('Failed to mark all as read', err);
+                          }
                         }}
                         className="text-[9px] text-primary font-bold hover:underline"
                       >
@@ -161,8 +255,15 @@ const Layout = ({ children }) => {
                       notifications.map(n => (
                         <div 
                           key={n.id} 
-                          onClick={() => {
-                            setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: !item.read } : item));
+                          onClick={async () => {
+                            if (!n.read) {
+                              try {
+                                await api.put(`/notifications/${n.id}/read`);
+                                setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+                              } catch (err) {
+                                console.log('Failed to mark notification as read', err);
+                              }
+                            }
                           }}
                           className={`p-3 flex items-start gap-3 hover:bg-surface-container-low transition-colors cursor-pointer relative ${
                             !n.read ? 'bg-primary/5 font-semibold' : ''

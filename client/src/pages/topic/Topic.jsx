@@ -987,7 +987,7 @@ const Topic = () => {
       {/* Mobile Floating AI Tutor Button */}
       <button 
         onClick={() => setShowFullscreenChat(true)}
-        className="lg:hidden fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 border border-white/20"
+        className="lg:hidden fixed bottom-28 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 border border-white/20"
         title="Chat with AI Tutor"
       >
         <span className="material-symbols-outlined text-2xl animate-pulse">forum</span>

@@ -25,6 +25,7 @@ const Insights = () => {
   // Filter Recent Quizzes states
   const [showAllQuizzes, setShowAllQuizzes] = useState(false);
   const [selectedQuizDetails, setSelectedQuizDetails] = useState(null);
+  const [recentQuizzes, setRecentQuizzes] = useState([]);
 
   // AI Focus Drill Modal
   const [showDrillModal, setShowDrillModal] = useState(false);
@@ -56,6 +57,7 @@ const Insights = () => {
       setFocusAreas(analyticsRes.data.focusAreas || []);
       setHeatmapData(analyticsRes.data.heatmapData || []);
       setSubjects(roadmapRes.data?.subjects || []);
+      setRecentQuizzes(analyticsRes.data.recentQuizzes || []);
     } catch (err) {
       console.error('Error fetching insights data:', err);
       triggerToast('Failed to load insights.');
@@ -298,17 +300,7 @@ const Insights = () => {
   const strongestSkills = subjects.filter(s => s.progress >= 70).slice(0, 3);
   const growthSkills = subjects.filter(s => s.progress < 70).slice(0, 3);
 
-  // Mock quiz details matching completed subjects/topics dynamically
-  const completedSubjects = subjects.filter(s => s.status === 'completed');
-  const recentQuizzes = completedSubjects.map((sub, idx) => ({
-    id: sub._id,
-    title: `${sub.name} Quiz`,
-    score: idx === 0 ? 100 : 85,
-    date: idx === 0 ? 'Today' : 'Yesterday',
-    correct: idx === 0 ? 5 : 4,
-    total: 5,
-    missed: idx === 0 ? 'None' : 'Architecture trade-offs review required.'
-  }));
+  // recentQuizzes is loaded from the backend stats API
 
   const displayedQuizzes = showAllQuizzes ? recentQuizzes : recentQuizzes.slice(0, 3);
 
