@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 import RoadmapTimeline from './RoadmapTimeline';
 import RoadmapDetailGrid from './RoadmapDetailGrid';
+import CompassLoader from '../../components/CompassLoader';
 
 const Roadmap = () => {
   const navigate = useNavigate();
@@ -32,11 +33,7 @@ const Roadmap = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <span className="material-symbols-outlined text-primary text-5xl animate-spin">sync</span>
-      </div>
-    );
+    return <CompassLoader />;
   }
 
   if (subjects.length === 0) {

@@ -24,11 +24,13 @@ const interviewAnswerSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
-  confidence: {
-    type: Number,
-    min: 1,
-    max: 5,
-    default: 3, // default confidence rating
+  evaluation: {
+    score: { type: Number, min: 0, max: 100, default: null },
+    verdict: { type: String, default: '' },
+    strengths: { type: String, default: '' },
+    gaps: { type: String, default: '' },
+    explanation: { type: String, default: '' },
+    evaluatedAt: { type: Date, default: null },
   },
 }, {
   timestamps: true,

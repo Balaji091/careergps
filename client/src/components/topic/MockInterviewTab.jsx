@@ -6,13 +6,21 @@ const MockInterviewTab = ({
   setCurrentQuestionIndex,
   interviewAnswer,
   setInterviewAnswer,
-  interviewConfidence,
-  setInterviewConfidence,
   handleMockSubmit,
   interviewStatus,
   interviewEvaluation,
-  reloadUserProfile
+  setInterviewEvaluation,
+  setInterviewStatus
 }) => {
+  const applyQuestionState = (index) => {
+    const question = interviewQuestions[index];
+    const hasSavedEvaluation = typeof question?.evaluation?.score === 'number';
+    setCurrentQuestionIndex(index);
+    setInterviewAnswer(question?.answer || '');
+    setInterviewEvaluation(hasSavedEvaluation ? question.evaluation : null);
+    setInterviewStatus(hasSavedEvaluation ? 'evaluated' : 'idle');
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {interviewQuestions.length === 0 ? (
@@ -21,24 +29,19 @@ const MockInterviewTab = ({
         </div>
       ) : (
         <div className="bg-white border border-outline-variant/30 p-6 rounded-xl shadow-sm">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
             <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-label-sm font-bold">
               {currentQuestionIndex + 1}/{interviewQuestions.length}
             </span>
-            <div className="flex items-center gap-2">
-              <span className="text-on-surface-variant font-label-sm font-semibold">Confidence:</span>
-              <select
-                value={interviewConfidence}
-                onChange={(e) => setInterviewConfidence(Number(e.target.value))}
-                className="bg-surface-container-low border border-outline-variant/30 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-primary font-semibold cursor-pointer"
-              >
-                <option value={1}>1 - Low</option>
-                <option value={2}>2 - Weak</option>
-                <option value={3}>3 - Med</option>
-                <option value={4}>4 - High</option>
-                <option value={5}>5 - Expert</option>
-              </select>
-            </div>
+            <a
+              href="https://mock-ai-frontend-gules.vercel.app/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-all hover:bg-primary/10"
+            >
+              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+              External Mock Platform
+            </a>
           </div>
           <p className="text-sm sm:text-base md:text-headline-md mb-4 text-on-surface leading-snug font-semibold">
             "{interviewQuestions[currentQuestionIndex]?.question}"
@@ -56,10 +59,7 @@ const MockInterviewTab = ({
                 type="button"
                 disabled={currentQuestionIndex === 0}
                 onClick={() => {
-                  const prevIdx = currentQuestionIndex - 1;
-                  setCurrentQuestionIndex(prevIdx);
-                  setInterviewAnswer(interviewQuestions[prevIdx]?.answer || '');
-                  setInterviewConfidence(interviewQuestions[prevIdx]?.confidence || 3);
+                  applyQuestionState(currentQuestionIndex - 1);
                 }}
                 className="px-2.5 sm:px-3 py-1 sm:py-1.5 border border-outline-variant/30 rounded-lg text-[10px] sm:text-xs font-semibold hover:bg-surface-container-low disabled:opacity-40 cursor-pointer"
               >
@@ -69,10 +69,7 @@ const MockInterviewTab = ({
                 type="button"
                 disabled={currentQuestionIndex === interviewQuestions.length - 1}
                 onClick={() => {
-                  const nextIdx = currentQuestionIndex + 1;
-                  setCurrentQuestionIndex(nextIdx);
-                  setInterviewAnswer(interviewQuestions[nextIdx]?.answer || '');
-                  setInterviewConfidence(interviewQuestions[nextIdx]?.confidence || 3);
+                  applyQuestionState(currentQuestionIndex + 1);
                 }}
                 className="px-2.5 sm:px-3 py-1 sm:py-1.5 border border-outline-variant/30 rounded-lg text-[10px] sm:text-xs font-semibold hover:bg-surface-container-low disabled:opacity-40 cursor-pointer"
               >
@@ -124,6 +121,12 @@ const MockInterviewTab = ({
               <h5 className="text-[10px] sm:text-xs text-primary font-bold uppercase mb-1">Areas of Development</h5>
               <p className="text-xs sm:text-body-md text-on-surface leading-relaxed">{interviewEvaluation.gaps}</p>
             </div>
+            {interviewEvaluation.explanation && (
+              <div className="p-3 sm:p-4 bg-white rounded-lg border border-outline-variant/20 shadow-sm">
+                <h5 className="text-[10px] sm:text-xs text-on-surface-variant font-bold uppercase mb-1">Explanation</h5>
+                <p className="text-xs sm:text-body-md text-on-surface leading-relaxed">{interviewEvaluation.explanation}</p>
+              </div>
+            )}
           </div>
         </div>
       )}

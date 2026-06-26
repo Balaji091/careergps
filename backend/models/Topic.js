@@ -76,6 +76,14 @@ const topicSchema = new mongoose.Schema({
         explanation: { type: String, default: '' },
       }
     ],
+    isPracticeGenerated: {
+      type: Boolean,
+      default: false,
+    },
+    cachedPracticeBoard: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
   }, {
     timestamps: true,
   });

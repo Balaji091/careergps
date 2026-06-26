@@ -182,7 +182,13 @@ const Settings = () => {
                   Change Strategy
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
+                <div className="opacity-50 grayscale pointer-events-none">
+                  <label className="block text-xs font-bold text-outline uppercase mb-1">Email Address</label>
+                  <div className="min-h-10 flex items-center px-3 py-2 bg-surface-container border border-outline-variant/50 rounded-lg text-sm text-on-surface break-all">
+                    {user?.email || 'Not Set'}
+                  </div>
+                </div>
                 <div className="opacity-50 grayscale pointer-events-none">
                   <label className="block text-xs font-bold text-outline uppercase mb-1">Target Role</label>
                   <div className="h-10 flex items-center px-3 bg-surface-container border border-outline-variant/50 rounded-lg text-sm text-on-surface">

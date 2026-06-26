@@ -4,7 +4,8 @@ import Analytics from '../models/Analytics.js';
 import Revision from '../models/Revision.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
-import { generateLearnContent, generateTopicTutorResponse, generateTopicQuizQuestions } from '../services/aiService.js';
+import QuizAttempt from '../models/QuizAttempt.js';
+import { generateLearnContent, generateTopicTutorResponse, generateTopicQuizQuestions, generateLearningActivity } from '../services/aiService.js';
 import { addXP, updateStreakActivity } from '../services/gamificationService.js';
 
 // Get learn content for a topic (generating if not cached)
@@ -296,14 +297,149 @@ export const getTopicQuiz = async (req, res) => {
   }
 };
 
-// Submit topic quiz and evaluate score
-export const submitTopicQuiz = async (req, res) => {
+const allowedActivityTypes = new Set([
+  'flow',
+  'algorithm',
+  'timeline',
+  'matching',
+  'simulation',
+  'packet',
+  'decision',
+  'pipeline',
+  'relationship',
+  'memory',
+  'bugfix',
+  'visualization',
+]);
+
+const sanitizeLearningActivity = (activity, topic) => {
+  const topicName = topic.name || 'this concept';
+  const fallbackFlow = [
+    { id: 'problem', step: 1, label: 'Problem', icon: 'error', description: 'Spot the real need.' },
+    { id: 'concept', step: 2, label: topicName, icon: 'psychology_alt', description: 'Apply the core idea.' },
+    { id: 'example', step: 3, label: 'Example', icon: 'deployed_code', description: 'Test with one case.' },
+    { id: 'result', step: 4, label: 'Result', icon: 'verified', description: 'Explain the outcome.' },
+  ];
+  const source = activity && typeof activity === 'object' ? activity : {};
+  const flow = Array.isArray(source.flow) && source.flow.length ? source.flow : fallbackFlow;
+  const activityType = allowedActivityTypes.has(source.activityType) ? source.activityType : 'flow';
+
+  return {
+    activityType,
+    title: source.title || `${topicName} Concept Lab`,
+    subtitle: source.subtitle || `Learn ${topicName} through a visual activity.`,
+    difficulty: source.difficulty || topic.difficulty || 'Beginner',
+    scenario: source.scenario || topic.summary || `Use ${topicName} in a realistic product situation.`,
+    objective: source.objective || source.goal || 'Arrange, test, and explain the concept.',
+    estimatedTime: source.estimatedTime || '3 min',
+    flow: flow.slice(0, 8).map((node, index) => ({
+      id: node.id || `step-${index + 1}`,
+      step: Number(node.step) || index + 1,
+      label: node.label || `Step ${index + 1}`,
+      icon: node.icon || 'tips_and_updates',
+      description: node.description || 'Understand this step visually.',
+    })),
+    exercise: source.exercise && typeof source.exercise === 'object' ? source.exercise : {},
+    memoryHack: source.memoryHack || source.memoryHook || `Remember ${topicName}: problem, rule, example, trade-off.`,
+    realWorldExample: source.realWorldExample || `${topicName} appears in real product decisions.`,
+    commonMistake: source.commonMistake || 'Memorizing definitions without an example.',
+    interviewTip: source.interviewTip || 'Explain the purpose, then one trade-off.',
+    summary: source.summary || source.lesson || `${topicName} becomes easier when shown as steps.`,
+    successMessage: source.successMessage || 'Concept locked. You can explain the path.',
+    retryHint: source.retryHint || 'Focus on cause, action, then result.',
+  };
+};
+
+// Retrieve topic Concept Lab activity (generating if not cached)
+export const getTopicPracticeBoard = async (req, res) => {
   const { topicId } = req.params;
-  const { score } = req.body; // Score from 0 to 5
 
   try {
     const topic = await Topic.findOne({ _id: topicId, user: req.user._id });
     if (!topic) return res.status(404).json({ message: 'Topic not found' });
+
+    if (
+      topic.isPracticeGenerated &&
+      topic.cachedPracticeBoard?.activityType &&
+      Array.isArray(topic.cachedPracticeBoard?.flow)
+    ) {
+      return res.json(topic.cachedPracticeBoard);
+    }
+
+    const subject = await Subject.findById(topic.subject);
+    const subjectName = subject ? subject.name : 'Computer Science';
+    const userLevel = req.user.profile?.experienceLevel || 'Beginner';
+
+    const learningActivity = await generateLearningActivity(topic.name, subjectName, userLevel);
+    const sanitizedBoard = sanitizeLearningActivity(learningActivity, topic);
+
+    topic.cachedPracticeBoard = sanitizedBoard;
+    topic.isPracticeGenerated = true;
+    await topic.save();
+
+    res.json(sanitizedBoard);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Retrieve previous quiz attempts for a topic
+export const getTopicQuizAttempts = async (req, res) => {
+  const { topicId } = req.params;
+
+  try {
+    const topic = await Topic.findOne({ _id: topicId, user: req.user._id });
+    if (!topic) return res.status(404).json({ message: 'Topic not found' });
+
+    const attempts = await QuizAttempt.find({ topic: topicId, user: req.user._id })
+      .sort({ createdAt: -1 });
+
+    res.json(attempts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Submit topic quiz and evaluate score
+export const submitTopicQuiz = async (req, res) => {
+  const { topicId } = req.params;
+  const { answers = {} } = req.body;
+
+  try {
+    const topic = await Topic.findOne({ _id: topicId, user: req.user._id });
+    if (!topic) return res.status(404).json({ message: 'Topic not found' });
+
+    const totalQuestions = topic.quizQuestions?.length || 0;
+    if (totalQuestions === 0) {
+      return res.status(400).json({ message: 'No quiz questions found for this topic' });
+    }
+
+    const answerSnapshot = topic.quizQuestions.map((q, idx) => {
+      const selectedIndex = Number.isInteger(answers[idx]) ? answers[idx] : null;
+      const isCorrect = selectedIndex === q.correctIndex;
+      return {
+        question: q.question,
+        options: q.options,
+        selectedIndex,
+        correctIndex: q.correctIndex,
+        explanation: q.explanation || '',
+        isCorrect,
+      };
+    });
+
+    const score = answerSnapshot.reduce((acc, answer) => acc + (answer.isCorrect ? 1 : 0), 0);
+    const passMark = Math.ceil(totalQuestions * 0.6);
+    const passed = score >= passMark;
+
+    const attempt = await QuizAttempt.create({
+      user: req.user._id,
+      subject: topic.subject,
+      topic: topicId,
+      score,
+      totalQuestions,
+      passed,
+      answers: answerSnapshot,
+    });
 
     // Award +10 XP per correct MCQ
     const xpGained = score * 10;
@@ -311,8 +447,8 @@ export const submitTopicQuiz = async (req, res) => {
       await addXP(req.user._id, xpGained, `Completed quiz for topic: ${topic.name}`);
     }
 
-    // Auto complete topic if score >= 3
-    if (score >= 3) {
+    // Auto complete topic if passing score achieved
+    if (passed) {
       await completeTopic(topicId, req.user._id);
     }
 
@@ -323,7 +459,7 @@ export const submitTopicQuiz = async (req, res) => {
 
     const previousQuizzes = analytics.totalQuizzesTaken || 0;
     const previousAvg = analytics.averageQuizScore || 0;
-    const currentScorePercent = (score / 5) * 100;
+    const currentScorePercent = (score / totalQuestions) * 100;
 
     analytics.totalQuizzesTaken = previousQuizzes + 1;
     analytics.averageQuizScore = Math.round(
@@ -337,6 +473,10 @@ export const submitTopicQuiz = async (req, res) => {
     res.json({
       message: 'Quiz score evaluated successfully',
       score,
+      passed,
+      passMark,
+      totalQuestions,
+      attempt,
       xpGained,
       totalQuizzesTaken: analytics.totalQuizzesTaken,
       averageQuizScore: analytics.averageQuizScore,

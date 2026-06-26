@@ -491,8 +491,128 @@ Return only JSON.`;
 };
 
 /**
+ * DRILL QUESTIONS
+ */
+export const generateDrillQuestions = async (role) => {
+  try {
+    const prompt = `Generate exactly 2 quick drill questions for someone preparing for the role of "${role}".
+The questions should test core technical knowledge, problem-solving, and practical understanding relevant to this role.
+Return a JSON object:
+{
+  "questions": [
+    { "question": "Question text?", "expectedAnswer": "Ideal concise answer" }
+  ]
+}
+Return only JSON.`;
+
+    const messages = [
+      { role: 'system', content: 'You are a technical interviewer that outputs JSON.' },
+      { role: 'user', content: prompt }
+    ];
+
+    const res = await callLLMWithRetryAndFallback(messages, true);
+    return res.questions || [];
+  } catch (error) {
+    console.error('[AI SERVICE] generateDrillQuestions failed:', error.message);
+    throw error;
+  }
+};
+
+/**
+ * DRILL ANSWER EVALUATION
+ */
+export const evaluateDrillAnswers = async (questions) => {
+  try {
+    const qaPairs = questions.map((q, i) => `Q${i + 1}: ${q.question}\nExpected: ${q.expectedAnswer}\nUser Answer: ${q.answer}`).join('\n\n');
+
+const prompt = `You are a friendly AI tutor providing personalized feedback directly to the learner.
+
+Compare the learner's answers with the expected answers below.
+
+${qaPairs}
+
+Guidelines:
+- Speak directly to the learner using "you" and "your". Never use "the student", "the learner", or third-person language.
+- Your feedback should feel like a personal tutor talking to the user after reviewing their work.
+- If some answers are incorrect or missing, politely point that out and encourage improvement.
+- If the user skipped questions, mention that they should attempt every question next time.
+- Highlight one positive aspect before giving one improvement.
+- Keep the feedback concise, supportive, and actionable.
+- Do not mention AI, evaluation process, or expected answers.
+
+Return ONLY this JSON:
+
+{
+  "score": <number between 0 and 100>,
+  "verdict": "<one encouraging sentence addressed directly to the user>",
+  "strengths": "<one sentence starting with 'You...' describing what you did well>",
+  "improvements": "<one sentence starting with 'Try...' or 'Focus on...' telling the user exactly what to improve next>"
+}
+
+Return only valid JSON.`;
+    const messages = [
+      { role: 'system', content: 'You are a technical evaluator that outputs JSON.' },
+      { role: 'user', content: prompt }
+    ];
+
+    return await callLLMWithRetryAndFallback(messages, true);
+  } catch (error) {
+    console.error('[AI SERVICE] evaluateDrillAnswers failed:', error.message);
+    throw error;
+  }
+};
+
+/**
+ * MOCK INTERVIEW ANSWER EVALUATION
+ */
+export const evaluateInterviewAnswer = async ({ topicName, question, answer }) => {
+  try {
+    const prompt = `Evaluate this mock interview answer for the topic "${topicName}".
+
+Question:
+${question}
+
+Candidate answer:
+${answer}
+
+Return ONLY valid JSON:
+{
+  "score": <number between 0 and 100>,
+  "verdict": "<short verdict>",
+  "strengths": "<one concise sentence about what is strong>",
+  "gaps": "<one concise sentence about what is missing or weak>",
+  "explanation": "<2-3 concise sentences explaining the ideal answer and what to improve>"
+}`;
+
+    const messages = [
+      { role: 'system', content: 'You are a senior technical interviewer that outputs JSON.' },
+      { role: 'user', content: prompt }
+    ];
+
+    const evaluation = await callLLMWithRetryAndFallback(messages, true);
+    return {
+      score: Math.max(0, Math.min(100, Number(evaluation.score) || 0)),
+      verdict: evaluation.verdict || 'Answer reviewed',
+      strengths: evaluation.strengths || 'You addressed part of the question clearly.',
+      gaps: evaluation.gaps || 'Add more detail about trade-offs, edge cases, and implementation constraints.',
+      explanation: evaluation.explanation || 'A strong answer should cover the main concept, practical trade-offs, and a concrete example.',
+    };
+  } catch (error) {
+    console.error('[AI SERVICE] evaluateInterviewAnswer failed:', error.message);
+    return {
+      score: 60,
+      verdict: 'Needs more depth',
+      strengths: 'You made a valid attempt and covered part of the topic.',
+      gaps: 'Add concrete trade-offs, edge cases, and implementation details.',
+      explanation: 'A stronger interview answer should define the concept, explain why it matters, discuss trade-offs, and close with a practical example.',
+    };
+  }
+};
+
+/**
  * DAILY PLANNER AI TASKS
  */
+
 export const generateDailyTasks = async (pendingTopics, revisionDue, studyHours, progress) => {
   try {
     const prompt = `Generate a personalized daily study checklist.
@@ -643,6 +763,172 @@ CRITICAL: Return ONLY JSON. Do not write markdown tags or pre-ambles. Ensure cor
     throw error;
   }
 };
+
+const classifyLearningActivityType = (topicName = '') => {
+  const name = topicName.toLowerCase();
+  if (/(merge sort|quick sort|binary search|dfs|bfs|algorithm|sorting|searching)/.test(name)) return 'algorithm';
+  if (/(dns|tcp|http|packet|network|osi)/.test(name)) return 'packet';
+  if (/(react lifecycle|git|version control|timeline|history)/.test(name)) return 'timeline';
+  if (/(database join|joins|normalization|match)/.test(name)) return 'matching';
+  if (/(scheduling|deadlock|operating system|cpu|process)/.test(name)) return 'simulation';
+  if (/(oop|inheritance|polymorphism|encapsulation|class)/.test(name)) return 'relationship';
+  if (/(compiler|pipeline|ci\/cd|build process)/.test(name)) return 'pipeline';
+  if (/(heap|trie|tree|graph|hash table)/.test(name)) return 'visualization';
+  if (/(bug|debug|exception|error handling)/.test(name)) return 'bugfix';
+  return 'flow';
+};
+
+const createFallbackLearningActivity = (topicName, subjectName, experienceLevel) => {
+  const activityType = classifyLearningActivityType(topicName);
+  const flow = [
+    { id: 'problem', step: 1, label: 'Problem', icon: 'error', description: 'Spot the real need.' },
+    { id: 'concept', step: 2, label: topicName, icon: 'psychology_alt', description: 'Apply the core idea.' },
+    { id: 'example', step: 3, label: 'Example', icon: 'deployed_code', description: 'Test with one case.' },
+    { id: 'result', step: 4, label: 'Result', icon: 'verified', description: 'Explain the outcome.' },
+  ];
+
+  return {
+    activityType,
+    title: `${topicName} Concept Lab`,
+    subtitle: `Learn ${topicName} through a visual ${activityType} activity.`,
+    difficulty: experienceLevel || 'Beginner',
+    scenario: `A ${subjectName || 'software'} team must use ${topicName} correctly in a product decision.`,
+    objective: 'Arrange, test, and explain the concept in one minute.',
+    estimatedTime: '3 min',
+    flow,
+    exercise: {
+      prompt: 'Arrange the concept flow.',
+      correctOrder: flow.map(item => item.id),
+      choices: flow.map(item => item.label),
+      pairs: [
+        { left: 'Real product', right: 'Use the concept in context' },
+        { left: 'Interview answer', right: 'Explain trade-offs clearly' },
+      ],
+      decisionOptions: [
+        { id: 'guess', label: 'Guess', result: 'The concept stays abstract.', isCorrect: false },
+        { id: 'example', label: 'Use example', result: 'The idea becomes testable.', isCorrect: true },
+        { id: 'memorize', label: 'Memorize', result: 'Recall may fail under pressure.', isCorrect: false },
+      ],
+      bugLines: [
+        { line: 1, code: `const concept = "${topicName}";`, isBug: false },
+        { line: 2, code: 'skipConcreteExample();', isBug: true, explanation: 'A concept needs a concrete test case.' },
+        { line: 3, code: 'explainTradeoff();', isBug: false },
+      ],
+    },
+    memoryHack: `Remember ${topicName}: problem, rule, example, trade-off.`,
+    realWorldExample: `${topicName} appears in everyday engineering decisions.`,
+    commonMistake: 'Memorizing the definition without testing an example.',
+    interviewTip: 'Start with purpose, then explain one trade-off.',
+    summary: `${topicName} becomes easier when shown as a sequence of choices.`,
+    successMessage: 'Concept locked. You can explain the visual path.',
+    retryHint: 'Focus on cause, action, then outcome.',
+  };
+};
+
+/**
+ * AI LEARNING ACTIVITY ENGINE
+ */
+export const generateLearningActivity = async (topicName, subjectName, experienceLevel) => {
+  const fallbackActivity = createFallbackLearningActivity(topicName, subjectName, experienceLevel);
+
+  try {
+    const prompt = `Create one AI-powered Concept Lab activity for the topic "${topicName}" in "${subjectName}" for a "${experienceLevel}" learner.
+
+First classify the topic and choose the best activity type.
+Allowed activityType values:
+flow, algorithm, timeline, matching, simulation, packet, decision, pipeline, relationship, memory, bugfix, visualization.
+
+Classification examples:
+Frontend Backend -> flow
+JWT -> flow
+OAuth -> flow
+DNS -> packet
+TCP Handshake -> packet
+HTTP -> packet
+Merge Sort -> algorithm
+Quick Sort -> algorithm
+Binary Search -> algorithm
+DFS -> algorithm
+BFS -> algorithm
+Heap -> visualization
+Trie -> visualization
+Compiler -> pipeline
+Operating System Scheduling -> simulation
+Deadlock -> simulation
+Database Joins -> matching
+Normalization -> matching
+OOP -> relationship
+React Lifecycle -> timeline
+Git -> timeline
+Docker -> flow
+Kubernetes -> flow
+REST API -> flow
+Caching -> flow
+
+Return ONLY valid JSON with this exact shape:
+{
+  "activityType": "flow",
+  "title": "",
+  "subtitle": "",
+  "difficulty": "",
+  "scenario": "",
+  "objective": "",
+  "estimatedTime": "",
+  "flow": [
+    {
+      "id": "lowercase-id",
+      "step": 1,
+      "label": "",
+      "icon": "material symbol icon name",
+      "description": ""
+    }
+  ],
+  "exercise": {
+    "prompt": "",
+    "correctOrder": ["step-id"],
+    "choices": ["short option"],
+    "pairs": [{ "left": "", "right": "" }],
+    "decisionOptions": [{ "id": "", "label": "", "result": "", "isCorrect": true }],
+    "bugLines": [{ "line": 1, "code": "", "isBug": false, "explanation": "" }]
+  },
+  "memoryHack": "",
+  "realWorldExample": "",
+  "commonMistake": "",
+  "interviewTip": "",
+  "summary": "",
+  "successMessage": "",
+  "retryHint": ""
+}
+
+Rules:
+- Produce only valid JSON. No markdown.
+- Never generate long theory.
+- Teach visually.
+- Use fewer than 12 words for each flow.description.
+- Prefer diagrams and steps over paragraphs.
+- Generate 4 to 7 flow nodes.
+- Include Memory Hack, Real World Example, Interview Tip, Common Mistake.
+- Include a 60-second practice task in exercise.prompt.
+- For matching activities, fill pairs.
+- For decision activities, fill decisionOptions.
+- For bugfix activities, fill bugLines with exactly one isBug true.
+- For flow, packet, algorithm, timeline, pipeline, simulation, relationship, memory, and visualization activities, fill correctOrder with the flow ids.
+- Do not include markdown or comments.`;
+
+    const messages = [
+      { role: 'system', content: 'You are an AI Activity Engine. Classify the topic, choose the best activity, and output JSON only.' },
+      { role: 'user', content: prompt }
+    ];
+
+    const activity = await callLLMWithRetryAndFallback(messages, true);
+    return activity?.title && activity?.activityType && Array.isArray(activity.flow) ? activity : fallbackActivity;
+  } catch (error) {
+    console.error('[AI SERVICE] generateLearningActivity failed:', error.message);
+    return fallbackActivity;
+  }
+};
+
+export const generateTopicPracticeBoard = generateLearningActivity;
 
 // Timeline/days parsing utility
 function parseTimelineToDays(timeline) {

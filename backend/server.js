@@ -15,6 +15,7 @@ import analyticsRoutes from './routes/analyticsRoutes.js';
 import linkedinRoutes from './routes/linkedinRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import drillRoutes from './routes/drillRoutes.js';
 
 // Load Config
 dotenv.config();
@@ -46,6 +47,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/linkedin', linkedinRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/drill', drillRoutes);
 
 // Base route for status check
 app.get('/api/health', (req, res) => {

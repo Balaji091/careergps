@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import CompassLoader from '../../components/CompassLoader';
 
 // Import local subcomponents
 import TutorSidebar from './TutorSidebar';
@@ -222,12 +223,15 @@ const Topic = () => {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [quizPassed, setQuizPassed] = useState(false);
+  const [quizAttempts, setQuizAttempts] = useState([]);
+  const [showQuizAnswers, setShowQuizAnswers] = useState(false);
+  const [quizAttemptPage, setQuizAttemptPage] = useState(1);
 
   // Mock Interview State
   const [interviewQuestions, setInterviewQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [interviewAnswer, setInterviewAnswer] = useState('');
-  const [interviewConfidence, setInterviewConfidence] = useState(3);
   const [interviewStatus, setInterviewStatus] = useState('idle'); // idle, evaluating, evaluated
   const [interviewEvaluation, setInterviewEvaluation] = useState(null);
 
@@ -237,36 +241,9 @@ const Topic = () => {
   const [savingNotes, setSavingNotes] = useState(false);
   const [isNotesPreview, setIsNotesPreview] = useState(true);
 
-  // Visual Load Balancer Simulator State (Practice Board)
-  const [lbAlgo, setLbAlgo] = useState('round-robin');
-  const [servers, setServers] = useState([
-    { name: 'Server A', connections: 2, capacity: 10, healthy: true },
-    { name: 'Server B', connections: 5, capacity: 10, healthy: true },
-    { name: 'Server C', connections: 1, capacity: 10, healthy: true }
-  ]);
-  const [simulatedRequests, setSimulatedRequests] = useState([]);
-  const [activeNodeIndex, setActiveNodeIndex] = useState(null);
-
-  // API Gateway Simulator State
-  const [gwRoute, setGwRoute] = useState('/users');
-  const [rateLimitEnabled, setRateLimitEnabled] = useState(true);
-  const [gwLogs, setGwLogs] = useState([]);
-  const [gwActiveNode, setGwActiveNode] = useState(null); // 'gateway', 'rate-limiter', 'service', 'block'
-  const [gwRequestCount, setGwRequestCount] = useState(0);
-  const [gwServiceTarget, setGwServiceTarget] = useState(null); // 'user-service', 'order-service', 'auth-service'
-
-  // DB Indexing Simulator State
-  const [indexEnabled, setIndexEnabled] = useState(false);
-  const [dbRunning, setDbRunning] = useState(false);
-  const [dbScanIndex, setDbScanIndex] = useState(-1);
-  const [dbResults, setDbResults] = useState(null); // { executionTime, rowsScanned, found }
-
-  // Microservices Chaos Simulator State
-  const [dbHealthy, setDbHealthy] = useState(true);
-  const [cacheEnabled, setCacheEnabled] = useState(true);
-  const [msActiveNode, setMsActiveNode] = useState(null); // 'client', 'gateway', 'cache', 'app', 'db'
-  const [msLogs, setMsLogs] = useState([]);
-  const [msStatus, setMsStatus] = useState('idle'); // 'idle', 'running', 'success', 'failed'
+  // Dynamic Concept Lab State
+  const [practiceBoard, setPracticeBoard] = useState(null);
+  const [practiceBoardLoading, setPracticeBoardLoading] = useState(false);
 
   // Flashcards Deck State
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -290,13 +267,29 @@ const Topic = () => {
         // Fetch Quiz
         const resQuiz = await api.get(`/roadmap/topic/${topicId}/quiz`);
         setQuizQuestions(resQuiz.data || []);
+        const resQuizAttempts = await api.get(`/roadmap/topic/${topicId}/quiz/attempts`);
+        setQuizAttempts(resQuizAttempts.data || []);
 
         // Fetch Interview Questions
         const resInterview = await api.get(`/interview/topic/${topicId}`);
         setInterviewQuestions(resInterview.data || []);
         if (resInterview.data && resInterview.data.length > 0) {
           setInterviewAnswer(resInterview.data[0].answer || '');
-          setInterviewConfidence(resInterview.data[0].confidence || 3);
+          const savedEvaluation = resInterview.data[0].evaluation;
+          const hasSavedEvaluation = typeof savedEvaluation?.score === 'number';
+          setInterviewEvaluation(hasSavedEvaluation ? savedEvaluation : null);
+          setInterviewStatus(hasSavedEvaluation ? 'evaluated' : 'idle');
+        }
+
+        setPracticeBoardLoading(true);
+        try {
+          const resPractice = await api.get(`/roadmap/topic/${topicId}/practice`);
+          setPracticeBoard(resPractice.data);
+        } catch (practiceErr) {
+          console.error('Failed to load practice board:', practiceErr);
+          setPracticeBoard(null);
+        } finally {
+          setPracticeBoardLoading(false);
         }
 
         setMessages([
@@ -366,214 +359,6 @@ const Topic = () => {
     }, 1500);
   };
 
-  const handleSimulateRequest = () => {
-    let targetIndex = 0;
-    if (lbAlgo === 'round-robin') {
-      const lastIndex = simulatedRequests.length > 0 ? simulatedRequests[simulatedRequests.length - 1].serverIndex : -1;
-      targetIndex = (lastIndex + 1) % servers.length;
-    } else if (lbAlgo === 'least-connections') {
-      let minVal = Infinity;
-      servers.forEach((s, idx) => {
-        if (s.connections < minVal) {
-          minVal = s.connections;
-          targetIndex = idx;
-        }
-      });
-    } else {
-      targetIndex = Math.floor(Math.random() * servers.length);
-    }
-
-    setActiveNodeIndex(targetIndex);
-    setSimulatedRequests(prev => [...prev, { id: Date.now(), serverIndex: targetIndex }]);
-    
-    setServers(prev => prev.map((s, idx) => {
-      if (idx === targetIndex) {
-        return { ...s, connections: Math.min(s.capacity, s.connections + 1) };
-      }
-      return s;
-    }));
-
-    setTimeout(() => {
-      setActiveNodeIndex(null);
-    }, 500);
-  };
-
-  const handleResetSimulator = () => {
-    setServers([
-      { name: 'Server A', connections: 2, capacity: 10, healthy: true },
-      { name: 'Server B', connections: 4, capacity: 10, healthy: true },
-      { name: 'Server C', connections: 1, capacity: 10, healthy: true }
-    ]);
-    setSimulatedRequests([]);
-    triggerToast('Simulator statistics reset.');
-  };
-
-  const handleSimulateSpike = () => {
-    triggerToast('Simulating traffic burst (10 requests)...');
-    let counter = 0;
-    const interval = setInterval(() => {
-      handleSimulateRequest();
-      counter++;
-      if (counter >= 10) clearInterval(interval);
-    }, 200);
-  };
-
-  // API Gateway Routing & Rate Limiter Request Handler
-  const handleGwRequest = () => {
-    setGwActiveNode('gateway');
-    setGwServiceTarget(null);
-    setGwRequestCount(prev => {
-      const nextCount = prev + 1;
-      const now = new Date().toLocaleTimeString();
-      
-      setTimeout(() => {
-        setGwActiveNode('rate-limiter');
-        
-        setTimeout(() => {
-          // If rate limit is enabled, block every fourth request
-          const limitExceeded = rateLimitEnabled && (nextCount % 4 === 0); 
-          
-          if (limitExceeded) {
-            setGwActiveNode('block');
-            setGwLogs(prevLogs => [`[${now}] ❌ BLOCKED: Rate limit exceeded (429 Too Many Requests) on ${gwRoute}`, ...prevLogs.slice(0, 8)]);
-            triggerToast('429 Too Many Requests (Rate Limited!) 🛑');
-          } else {
-            let target = '';
-            let serviceName = '';
-            if (gwRoute === '/users') {
-              target = 'user-service';
-              serviceName = 'User Service';
-            } else if (gwRoute === '/orders') {
-              target = 'order-service';
-              serviceName = 'Order Service';
-            } else if (gwRoute === '/auth') {
-              target = 'auth-service';
-              serviceName = 'Auth Service';
-            } else {
-              target = 'block';
-            }
-            
-            if (target === 'block') {
-              setGwActiveNode('block');
-              setGwLogs(prevLogs => [`[${now}] ⚠️ ROUTING FAILURE: Route ${gwRoute} not found (404 Not Found)`, ...prevLogs.slice(0, 8)]);
-              triggerToast('404 Route Not Found ⚠️');
-            } else {
-              setGwActiveNode('service');
-              setGwServiceTarget(target);
-              setGwLogs(prevLogs => [`[${now}] 🟢 SUCCESS: Routed ${gwRoute} -> ${serviceName} (200 OK)`, ...prevLogs.slice(0, 8)]);
-              triggerToast('200 OK: Routed successfully! 🟢');
-            }
-          }
-        }, 600);
-      }, 400);
-
-      return nextCount;
-    });
-  };
-
-  // DB Indexing and Search Query Handler
-  const handleRunDbQuery = () => {
-    if (dbRunning) return;
-    setDbRunning(true);
-    setDbScanIndex(-1);
-    setDbResults(null);
-
-    const targetId = 847; // Target User at row index 847
-    
-    if (indexEnabled) {
-      // Simulate binary search steps through index
-      let steps = [];
-      let low = 0;
-      let high = 1000;
-      while (low <= high) {
-        let mid = Math.floor((low + high) / 2);
-        steps.push(mid);
-        if (mid === targetId) break;
-        if (mid < targetId) low = mid + 1;
-        else high = mid - 1;
-      }
-      
-      let stepIdx = 0;
-      const interval = setInterval(() => {
-        if (stepIdx < steps.length) {
-          setDbScanIndex(steps[stepIdx]);
-          stepIdx++;
-        } else {
-          clearInterval(interval);
-          setDbResults({
-            executionTime: '0.03 ms',
-            rowsScanned: steps.length,
-            found: true
-          });
-          setDbRunning(false);
-          triggerToast('Query completed using Index Seek! ⚡');
-        }
-      }, 180);
-    } else {
-      // Sequential table scan
-      let currentScan = 0;
-      const interval = setInterval(() => {
-        if (currentScan < targetId) {
-          setDbScanIndex(currentScan);
-          currentScan += 43; // Step size to keep visualization readable
-        } else {
-          setDbScanIndex(targetId);
-          clearInterval(interval);
-          setDbResults({
-            executionTime: '8.47 ms',
-            rowsScanned: targetId,
-            found: true
-          });
-          setDbRunning(false);
-          triggerToast('Query completed using Full Table Scan! 🐢');
-        }
-      }, 60);
-    }
-  };
-
-  // Chaos Monkey Resilience Request Handler
-  const handleTriggerMsRequest = () => {
-    if (msStatus === 'running') return;
-    setMsStatus('running');
-    setMsActiveNode('client');
-    const now = new Date().toLocaleTimeString();
-    
-    setTimeout(() => {
-      setMsActiveNode('gateway');
-      
-      setTimeout(() => {
-        if (cacheEnabled) {
-          setMsActiveNode('cache');
-          setTimeout(() => {
-            setMsStatus('success');
-            setMsActiveNode(null);
-            setMsLogs(prev => [`[${now}] ⚡ CACHE HIT: Retrieved from Redis Cache (Response: 200 OK in 2ms)`, ...prev.slice(0, 8)]);
-            triggerToast('Cache Hit! Lightning-fast retrieval ⚡');
-          }, 600);
-        } else {
-          setMsActiveNode('app');
-          
-          setTimeout(() => {
-            if (dbHealthy) {
-              setMsActiveNode('db');
-              setTimeout(() => {
-                setMsStatus('success');
-                setMsActiveNode(null);
-                setMsLogs(prev => [`[${now}] 🟢 SUCCESS: Fetched from DB (Response: 200 OK in 85ms)`, ...prev.slice(0, 8)]);
-                triggerToast('Success: Fetched from Database! 🟢');
-              }, 600);
-            } else {
-              setMsStatus('failed');
-              setMsActiveNode(null);
-              setMsLogs(prev => [`[${now}] ❌ DATABASE OUTAGE: Failed to connect to DB (Response: 500 Internal Server Error)`, ...prev.slice(0, 8)]);
-              triggerToast('Error: Database is down! ❌');
-            }
-          }, 600);
-        }
-      }, 600);
-    }, 400);
-  };
-
   const handleChatSubmit = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -602,6 +387,30 @@ const Topic = () => {
       setMessages(prev => [...prev, { sender: 'ai', text: res.data.response || res.data.reply }]);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Handler for Gemini-style tools menu in FullscreenChat
+  const handleToolSelect = (toolId) => {
+    // Tab-switching tools: close chat and switch tab
+    const tabMap = { flashcards: 'revision', notes: 'notes', quiz: 'quiz' };
+    if (tabMap[toolId]) {
+      setShowFullscreenChat(false);
+      setActiveTab(tabMap[toolId]);
+      return;
+    }
+    // Chat-based tools: send as AI chat message
+    const prompts = {
+      summary: `Give me a concise summary of ${topic?.name || 'this topic'}.`,
+      concept: `Explain the core concept of ${topic?.name || 'this topic'}.`,
+      interview: `Give me a system design interview question for ${topic?.name || 'this topic'}.`
+    };
+    const text = prompts[toolId];
+    if (text) {
+      setMessages(prev => [...prev, { sender: 'user', text }]);
+      api.post(`/roadmap/topic/${topicId}/chat`, { message: text })
+        .then(res => setMessages(prev => [...prev, { sender: 'ai', text: res.data.response || res.data.reply }]))
+        .catch(err => console.error(err));
     }
   };
 
@@ -692,28 +501,22 @@ const Topic = () => {
 
     setInterviewStatus('evaluating');
     try {
-      // Save answer to database
-      await api.put(`/interview/answer/${activeQuestion._id}`, {
+      const res = await api.put(`/interview/answer/${activeQuestion._id}`, {
         answer: interviewAnswer,
-        confidence: interviewConfidence
       });
-      
-      // Perform AI simulation evaluation response
-      setTimeout(() => {
-        setInterviewStatus('evaluated');
-        setInterviewEvaluation({
-          score: 80 + Math.floor(Math.random() * 16),
-          verdict: 'Strong Technical Depth',
-          strengths: 'Excellent conceptual breakdown and mention of practical constraints.',
-          gaps: 'Consider adding edge case recovery strategies.'
-        });
-        triggerToast('Evaluation completed successfully!');
-        reloadUserProfile(); // Sync gamification XP updates
-      }, 1200);
+
+      const updatedAnswer = res.data.qAnswer;
+      setInterviewQuestions(prev => prev.map(q => (
+        q._id === updatedAnswer._id ? updatedAnswer : q
+      )));
+      setInterviewEvaluation(res.data.evaluation);
+      setInterviewStatus('evaluated');
+      triggerToast('Evaluation completed successfully!');
+      reloadUserProfile();
     } catch (err) {
       console.error(err);
       setInterviewStatus('idle');
-      triggerToast('Failed to save answer.');
+      triggerToast('Failed to evaluate answer.');
     }
   };
 
@@ -739,17 +542,17 @@ const Topic = () => {
   };
 
   const handleSubmitQuiz = async () => {
-    const score = quizQuestions.reduce((acc, q, idx) => acc + (quizAnswers[idx] === q.correctIndex ? 1 : 0), 0);
-    setQuizScore(score);
-    setQuizSubmitted(true);
-    setQuizCompleted(true);
-    
     try {
-      await api.post(`/roadmap/topic/${topicId}/quiz/submit`, { score });
-      triggerToast(`Quiz completed! Score: ${score}/5`);
+      const res = await api.post(`/roadmap/topic/${topicId}/quiz/submit`, { answers: quizAnswers });
+      setQuizScore(res.data.score);
+      setQuizPassed(res.data.passed);
+      setQuizSubmitted(true);
+      setQuizCompleted(true);
+      setQuizAttempts(prev => [res.data.attempt, ...prev]);
+      setQuizAttemptPage(1);
+      triggerToast(`Quiz completed! Score: ${res.data.score}/${res.data.totalQuestions}`);
       
-      // Auto complete topic if score >= 3
-      if (score >= 3) {
+      if (res.data.passed) {
         await api.put(`/roadmap/topic/${topicId}/progress`, {
           progress: 100,
           status: 'completed'
@@ -760,7 +563,19 @@ const Topic = () => {
       reloadUserProfile(); // Update XP
     } catch (err) {
       console.error(err);
+      triggerToast('Failed to submit quiz.');
     }
+  };
+
+  const handleRetryQuiz = () => {
+    setCurrentQuizIndex(0);
+    setSelectedQuizOption(null);
+    setQuizAnswers({});
+    setQuizSubmitted(false);
+    setQuizCompleted(false);
+    setQuizScore(0);
+    setQuizPassed(false);
+    setShowQuizAnswers(false);
   };
 
   const flashcardsDeck = learnContent?.keyTakeaways && learnContent.keyTakeaways.length > 0
@@ -776,11 +591,7 @@ const Topic = () => {
       ];
 
   if (loading) {
-    return (
-      <div className="flex h-[60vh] w-full items-center justify-center bg-background">
-        <span className="material-symbols-outlined text-primary text-5xl animate-spin">sync</span>
-      </div>
-    );
+    return <CompassLoader />;
   }
 
   if (!topic) {
@@ -808,12 +619,12 @@ const Topic = () => {
         {/* Breadcrumb & Header */}
         <div className="flex justify-between items-start gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-on-surface-variant font-label-sm">
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs md:font-label-sm text-on-surface-variant">
               <Link to="/roadmap" className="hover:text-primary transition-colors">Pathways</Link>
               <span className="material-symbols-outlined text-[12px]">chevron_right</span>
-              <Link to={`/subject/${topic?.subject}`} className="hover:text-primary transition-colors">Subject Workspace</Link>
-              <span className="material-symbols-outlined text-[12px]">chevron_right</span>
-              <span className="text-primary font-medium">{topic?.name}</span>
+              <Link to={`/subject/${topic?.subject}`} className="hover:text-primary transition-colors">
+                {topic?.lessonName || 'Subject Workspace'}
+              </Link>
             </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-headline-lg text-on-surface font-bold tracking-tight leading-tight">
               {topic?.name}
@@ -834,7 +645,7 @@ const Topic = () => {
           {[
             { id: 'learn', label: 'Learn' },
             { id: 'notes', label: 'Smart Notes' },
-            { id: 'practice', label: 'Practice Board' },
+            { id: 'practice', label: 'Concept Lab' },
             { id: 'quiz', label: 'Quiz Lab' },
             { id: 'revision', label: 'Revision Deck' },
             { id: 'mock', label: 'Mock Interview' }
@@ -886,39 +697,12 @@ const Topic = () => {
             />
           )}
 
-          {/* TAB 3: PRACTICE BOARD */}
+          {/* TAB 3: CONCEPT LAB */}
           {activeTab === 'practice' && (
             <PracticeBoardTab
               topic={topic}
-              lbAlgo={lbAlgo}
-              setLbAlgo={setLbAlgo}
-              servers={servers}
-              activeNodeIndex={activeNodeIndex}
-              handleSimulateRequest={handleSimulateRequest}
-              handleSimulateSpike={handleSimulateSpike}
-              handleResetSimulator={handleResetSimulator}
-              gwRoute={gwRoute}
-              setGwRoute={setGwRoute}
-              rateLimitEnabled={rateLimitEnabled}
-              setRateLimitEnabled={setRateLimitEnabled}
-              gwActiveNode={gwActiveNode}
-              gwServiceTarget={gwServiceTarget}
-              handleGwRequest={handleGwRequest}
-              gwLogs={gwLogs}
-              indexEnabled={indexEnabled}
-              setIndexEnabled={setIndexEnabled}
-              dbRunning={dbRunning}
-              dbScanIndex={dbScanIndex}
-              dbResults={dbResults}
-              handleRunDbQuery={handleRunDbQuery}
-              dbHealthy={dbHealthy}
-              setDbHealthy={setDbHealthy}
-              cacheEnabled={cacheEnabled}
-              setCacheEnabled={setCacheEnabled}
-              msActiveNode={msActiveNode}
-              msLogs={msLogs}
-              msStatus={msStatus}
-              handleTriggerMsRequest={handleTriggerMsRequest}
+              practiceBoard={practiceBoard}
+              practiceBoardLoading={practiceBoardLoading}
             />
           )}
 
@@ -929,14 +713,20 @@ const Topic = () => {
               quizCompleted={quizCompleted}
               quizSubmitted={quizSubmitted}
               quizScore={quizScore}
+              quizPassed={quizPassed}
               currentQuizIndex={currentQuizIndex}
-              setCurrentQuizIndex={setCurrentQuizIndex}
               selectedQuizOption={selectedQuizOption}
               handleSelectQuizOption={handleSelectQuizOption}
               handlePrevQuizQuestion={handlePrevQuizQuestion}
               handleNextQuizQuestion={handleNextQuizQuestion}
               handleSubmitQuiz={handleSubmitQuiz}
+              handleRetryQuiz={handleRetryQuiz}
               quizAnswers={quizAnswers}
+              showQuizAnswers={showQuizAnswers}
+              setShowQuizAnswers={setShowQuizAnswers}
+              quizAttempts={quizAttempts}
+              quizAttemptPage={quizAttemptPage}
+              setQuizAttemptPage={setQuizAttemptPage}
             />
           )}
 
@@ -960,12 +750,11 @@ const Topic = () => {
               setCurrentQuestionIndex={setCurrentQuestionIndex}
               interviewAnswer={interviewAnswer}
               setInterviewAnswer={setInterviewAnswer}
-              interviewConfidence={interviewConfidence}
-              setInterviewConfidence={setInterviewConfidence}
               handleMockSubmit={handleMockSubmit}
               interviewStatus={interviewStatus}
               interviewEvaluation={interviewEvaluation}
-              reloadUserProfile={reloadUserProfile}
+              setInterviewEvaluation={setInterviewEvaluation}
+              setInterviewStatus={setInterviewStatus}
             />
           )}
 
@@ -987,7 +776,7 @@ const Topic = () => {
       {/* Mobile Floating AI Tutor Button */}
       <button 
         onClick={() => setShowFullscreenChat(true)}
-        className="lg:hidden fixed bottom-28 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 border border-white/20"
+        className="lg:hidden fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-5 md:bottom-6 md:right-6 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[60] border border-white/20"
         title="Chat with AI Tutor"
       >
         <span className="material-symbols-outlined text-2xl animate-pulse">forum</span>
@@ -1053,6 +842,7 @@ const Topic = () => {
           handleChatSubmit={handleChatSubmit}
           setShowFullscreenChat={setShowFullscreenChat}
           renderMarkdown={renderMarkdown}
+          onToolSelect={handleToolSelect}
         />
       )}
     </div>

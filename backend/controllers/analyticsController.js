@@ -7,6 +7,8 @@ import Analytics from '../models/Analytics.js';
 import Achievement from '../models/Achievement.js';
 import { getLocalDateString } from '../services/gamificationService.js';
 import Subject from '../models/Subject.js';
+import QuizAttempt from '../models/QuizAttempt.js';
+import Drill from '../models/Drill.js';
 
 // Calculate and retrieve all dashboard statistics
 export const getDashboardStats = async (req, res) => {
@@ -14,6 +16,7 @@ export const getDashboardStats = async (req, res) => {
   const todayStr = getLocalDateString();
 
   try {
+    const today = new Date();
     // 1. Gather all raw metrics
     const [
       topics,
@@ -22,6 +25,7 @@ export const getDashboardStats = async (req, res) => {
       revisions,
       streakDoc,
       achievements,
+      completedDrills,
     ] = await Promise.all([
       Topic.find({ user: userId }),
       Note.find({ user: userId }),
@@ -29,6 +33,7 @@ export const getDashboardStats = async (req, res) => {
       Revision.find({ user: userId }),
       Streak.findOne({ user: userId }),
       Achievement.find({ user: userId }),
+      Drill.find({ user: userId, status: 'completed' }),
     ]);
 
     const totalTopics = topics.length;
@@ -41,6 +46,15 @@ export const getDashboardStats = async (req, res) => {
     const totalExpectedQuestions = totalTopics * 3;
     const completedAnswersCount = answers.filter(a => a.answer && a.answer.trim() !== '').length;
     const interviewQuestionsCompleted = totalExpectedQuestions > 0 ? Math.min((completedAnswersCount / totalExpectedQuestions) * 100, 100) : 0;
+    const evaluatedInterviewAnswers = answers.filter(a => Number.isFinite(a.evaluation?.score));
+    const interviewPerformanceAvg = evaluatedInterviewAnswers.length > 0
+      ? Math.round(evaluatedInterviewAnswers.reduce((sum, a) => sum + (a.evaluation.score || 0), 0) / evaluatedInterviewAnswers.length)
+      : 0;
+
+    const totalDrillsAttended = completedDrills.length;
+    const averageDrillScore = totalDrillsAttended > 0
+      ? Math.round(completedDrills.reduce((sum, drill) => sum + (drill.evaluation?.score || 0), 0) / totalDrillsAttended)
+      : 0;
 
     const completedRevisionsCount = revisions.filter(r => r.status === 'Completed' || r.status === 'Mastered').length;
     const revisionCompletion = revisions.length > 0 ? (completedRevisionsCount / revisions.length) * 100 : 0;
@@ -154,26 +168,34 @@ export const getDashboardStats = async (req, res) => {
       });
     }
 
-    const recentQuizzes = completedTopics.map(t => {
-      const correctAnswers = 3 + (t.name.length % 3); // Passing score (3, 4, or 5)
-      const scorePct = Math.round((correctAnswers / 5) * 100);
+    const recentQuizAttempts = await QuizAttempt.find({ user: userId })
+      .populate('topic', 'name')
+      .sort({ createdAt: -1 })
+      .limit(20);
 
+    const recentQuizzes = recentQuizAttempts.map(attempt => {
       let dateString = 'Today';
-      if (t.updatedAt) {
-        const diffMs = new Date() - new Date(t.updatedAt);
+      if (attempt.createdAt) {
+        const diffMs = new Date() - new Date(attempt.createdAt);
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
         if (diffDays === 1) dateString = 'Yesterday';
         else if (diffDays > 1) dateString = `${diffDays} days ago`;
       }
 
+      const scorePct = attempt.totalQuestions > 0
+        ? Math.round((attempt.score / attempt.totalQuestions) * 100)
+        : 0;
+
       return {
-        id: t._id,
-        title: `${t.name} Quiz`,
+        id: attempt._id,
+        title: `${attempt.topic?.name || 'Topic'} Quiz`,
         score: scorePct,
         date: dateString,
-        correct: correctAnswers,
-        total: 5,
-        missed: correctAnswers === 5 ? 'None' : 'Review advanced technical concepts.'
+        correct: attempt.score,
+        total: attempt.totalQuestions,
+        passed: attempt.passed,
+        answers: attempt.answers || [],
+        missed: attempt.score === attempt.totalQuestions ? 'None' : 'Review incorrect answers in the report.'
       };
     });
 
@@ -190,6 +212,9 @@ export const getDashboardStats = async (req, res) => {
         longestStreak: streakDoc ? streakDoc.longestStreak : 0,
         totalQuizzesTaken: analyticsDoc ? analyticsDoc.totalQuizzesTaken : 0,
         averageQuizScore: analyticsDoc ? analyticsDoc.averageQuizScore : 0,
+        totalDrillsAttended,
+        averageDrillScore,
+        interviewPerformanceAvg,
       },
       recentQuizzes,
       areasToImprove,

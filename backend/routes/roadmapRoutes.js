@@ -11,6 +11,8 @@ import {
   chatWithTopicTutor,
   awardQuizReward,
   getTopicQuiz,
+  getTopicPracticeBoard,
+  getTopicQuizAttempts,
   submitTopicQuiz,
 } from '../controllers/topicController.js';
 import { protect } from '../middleware/auth.js';
@@ -30,6 +32,8 @@ router.put('/topic/:topicId/progress', updateTopicProgress);
 router.post('/topic/:topicId/chat', chatWithTopicTutor);
 router.post('/topic/:topicId/quiz/reward', awardQuizReward);
 router.get('/topic/:topicId/quiz', getTopicQuiz);
+router.get('/topic/:topicId/practice', getTopicPracticeBoard);
+router.get('/topic/:topicId/quiz/attempts', getTopicQuizAttempts);
 router.post('/topic/:topicId/quiz/submit', submitTopicQuiz);
 
 export default router;

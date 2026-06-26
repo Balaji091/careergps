@@ -1,17 +1,14 @@
 import React, { useContext } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import CompassLoader from './CompassLoader';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <span className="material-symbols-outlined text-primary text-5xl animate-spin">sync</span>
-      </div>
-    );
+    return <CompassLoader fullScreen />;
   }
 
   if (!user) {

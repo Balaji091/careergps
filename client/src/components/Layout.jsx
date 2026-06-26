@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 
 const Layout = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout, user } = useContext(AuthContext);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [streak, setStreak] = useState(0);
@@ -375,21 +376,23 @@ const Layout = ({ children }) => {
             </Link>
           );
         })}
+      </nav>
+
       {/* Custom Confirmation Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-on-surface/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-outline-variant/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
+        <div className="fixed inset-0 bg-on-surface/30 backdrop-blur-sm z-[120] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white border border-outline-variant/30 rounded-2xl p-5 sm:p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
             <div className="w-12 h-12 bg-error/10 text-error flex items-center justify-center rounded-full mx-auto mb-4">
               <span className="material-symbols-outlined text-2xl">logout</span>
             </div>
-            <h3 className="font-headline-md text-lg text-on-surface font-bold mb-2">Confirm Logout</h3>
-            <p className="font-body-sm text-on-surface-variant mb-6 leading-relaxed">
+            <h3 className="font-headline-md text-base sm:text-lg text-on-surface font-bold mb-2">Confirm Logout</h3>
+            <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant mb-6 leading-relaxed">
               Are you sure you want to end your learning session and log out of Career GPS?
             </p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold text-label-md rounded-lg transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold text-xs sm:text-label-md rounded-lg transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -397,8 +400,9 @@ const Layout = ({ children }) => {
                 onClick={async () => {
                   setShowLogoutConfirm(false);
                   await logout();
+                  navigate('/login');
                 }}
-                className="flex-1 px-4 py-2.5 bg-error hover:bg-error/90 text-white font-bold text-label-md rounded-lg transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2.5 bg-error hover:bg-error/90 text-white font-bold text-xs sm:text-label-md rounded-lg transition-colors cursor-pointer"
               >
                 Yes, Logout
               </button>
@@ -406,7 +410,6 @@ const Layout = ({ children }) => {
           </div>
         </div>
       )}
-      </nav>
     </div>
   );
 };

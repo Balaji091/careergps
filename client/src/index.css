@@ -56,3 +56,44 @@
   scrollbar-width: none;  /* Firefox */
 }
 
+@media (max-width: 640px) {
+  .text-headline-xl {
+    font-size: 34px;
+    line-height: 42px;
+    letter-spacing: 0;
+  }
+
+  .text-headline-lg,
+  .text-headline-lg-mobile {
+    font-size: 24px;
+    line-height: 32px;
+    letter-spacing: 0;
+  }
+
+  .text-headline-md {
+    font-size: 20px;
+    line-height: 28px;
+    letter-spacing: 0;
+  }
+
+  .text-body-lg {
+    font-size: 15px;
+    line-height: 24px;
+  }
+
+  .text-body-md {
+    font-size: 14px;
+    line-height: 22px;
+  }
+
+  .text-body-sm,
+  .text-label-md {
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .text-label-sm {
+    font-size: 11px;
+    line-height: 16px;
+  }
+}

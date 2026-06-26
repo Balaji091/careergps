@@ -93,7 +93,41 @@ export default {
         "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
         "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
         "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
-      }
+      },
+      keyframes: {
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-4px)' },
+          '20%, 40%, 60%, 80%': { transform: 'translateX(4px)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        'pop-in': {
+          '0%': { transform: 'scale(0)', opacity: '0' },
+          '60%': { transform: 'scale(1.2)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'compass-spin': {
+          '0%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(90deg)' },
+          '50%': { transform: 'rotate(180deg)' },
+          '75%': { transform: 'rotate(270deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        'compass-ripple': {
+          '0%': { transform: 'scale(0.5)', opacity: '0.6', backgroundColor: 'rgba(42, 20, 180, 0.3)' },
+          '100%': { transform: 'scale(3)', opacity: '0', backgroundColor: 'rgba(42, 20, 180, 0)' },
+        },
+      },
+      animation: {
+        shake: 'shake 0.5s ease-in-out',
+        float: 'float 3s ease-in-out infinite',
+        'pop-in': 'pop-in 0.3s ease-out forwards',
+        'compass-spin': 'compass-spin 2s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+        'compass-ripple': 'compass-ripple 2s ease-out infinite',
+      },
     },
   },
   plugins: [],

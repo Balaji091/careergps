@@ -5,6 +5,7 @@ import { AuthContext } from '../../context/AuthContext';
 import SubjectProgress from './SubjectProgress';
 import SubjectCurriculum from './SubjectCurriculum';
 import SubjectChat from './SubjectChat';
+import CompassLoader from '../../components/CompassLoader';
 
 const Subject = () => {
   const { subjectId } = useParams();
@@ -118,11 +119,7 @@ const Subject = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <span className="material-symbols-outlined text-primary text-5xl animate-spin">sync</span>
-      </div>
-    );
+    return <CompassLoader />;
   }
 
   if (!subject) {
