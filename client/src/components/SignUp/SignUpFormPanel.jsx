@@ -287,11 +287,11 @@ const SignUpFormPanel = ({
       {/* Terms */}
       <p className="mt-12 font-label-sm text-label-sm text-outline text-center leading-relaxed">
         By signing up, you agree to our{' '}
-        <a className="hover:text-on-surface-variant underline" href="#">
+        <a className="hover:text-on-surface-variant " href="#">
           Terms of Service
         </a>{' '}
         and{' '}
-        <a className="hover:text-on-surface-variant underline" href="#">
+        <a className="hover:text-on-surface-variant " href="#" >
           Privacy Policy
         </a>
         .

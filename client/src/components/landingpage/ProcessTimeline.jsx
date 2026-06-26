@@ -26,7 +26,7 @@ const ProcessTimeline = () => {
               </div>
               <h4 className="font-headline-md text-headline-md mb-2 text-on-surface">Onboard</h4>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Sync your GitHub and LinkedIn to map your baseline technical DNA.
+               Tell us your target engineering role to personalize your learning journey.
               </p>
             </div>
             {/* Step 2 */}
@@ -41,7 +41,7 @@ const ProcessTimeline = () => {
               </div>
               <h4 className="font-headline-md text-headline-md mb-2 text-on-surface">Customize</h4>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Set your North Star goal (e.g., Staff Engineer at a Series B startup).
+                Choose when you want to achieve your goal, and we'll build your roadmap.
               </p>
             </div>
             {/* Step 3 */}
@@ -56,7 +56,7 @@ const ProcessTimeline = () => {
               </div>
               <h4 className="font-headline-md text-headline-md mb-2 text-on-surface">Practice</h4>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Execute high-signal tasks and interactive system design labs.
+               Master concepts through AI tutors, interactive labs, quizzes, and projects.
               </p>
             </div>
             {/* Step 4 */}
@@ -71,7 +71,7 @@ const ProcessTimeline = () => {
               </div>
               <h4 className="font-headline-md text-headline-md mb-2 text-on-surface">Master</h4>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Secure your promotion with a verifiable portfolio of career evidence.
+               Build real-world skills, prepare for interviews, and confidently pursue your dream role.
               </p>
             </div>
           </div>

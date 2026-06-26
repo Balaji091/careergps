@@ -12,10 +12,10 @@ const Hero = () => {
           <span className="font-label-sm text-label-sm uppercase tracking-wider">Next-Gen Career Intelligence</span>
         </div>
         <h1 className="font-headline-xl text-headline-xl mb-6 max-w-4xl mx-auto leading-tight">
-          Engineer Your Path to <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Technical Leadership</span>
+         Turn Your Goals Into   <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Learning Roadmap</span>
         </h1>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-10">
-          Precision-engineered career guidance for high-growth engineers. Navigate skill gaps, master new tech stacks, and accelerate your climb to Staff or Principal Engineer.
+          Choose your dream role, follow a personalized AI roadmap, practice with interactive concept labs, and become job-ready with confidence.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           <Link 

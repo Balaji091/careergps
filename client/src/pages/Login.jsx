@@ -61,10 +61,10 @@ const Login = () => {
             </span>
           </div>
           <h1 className="font-headline-xl text-headline-xl mb-stack-md leading-tight">
-            Chart Your Engineering Future.
+           Build the Engineering Career You Dream Of
           </h1>
           <p className="font-body-lg text-body-lg opacity-80 mb-stack-lg">
-            Join 10,000+ technical leaders using data-driven insights to accelerate their career trajectory from IC to Executive.
+             Continue learning, practicing, and growing with your personalized roadmap.
           </p>
           <div className="flex flex-col gap-gutter">
             <div className="flex items-center gap-stack-md">
@@ -77,13 +77,13 @@ const Login = () => {
               <div className="w-10 h-10 rounded-full bg-on-primary/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-on-primary">insights</span>
               </div>
-              <p className="font-label-md text-label-md">Real-time Market Salary Benchmarks</p>
+              <p className="font-label-md text-label-md">Track Your Progress</p>
             </div>
             <div className="flex items-center gap-stack-md">
               <div className="w-10 h-10 rounded-full bg-on-primary/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-on-primary">groups</span>
               </div>
-              <p className="font-label-md text-label-md">Exclusive Tech Leadership Circles</p>
+              <p className="font-label-md text-label-md">Learning Intelligence</p>
             </div>
           </div>
         </div>
@@ -201,11 +201,11 @@ const Login = () => {
           {/* Terms */}
           <p className="mt-12 font-label-sm text-label-sm text-outline text-center leading-relaxed">
             By signing in, you agree to our{' '}
-            <a className="hover:text-on-surface-variant underline" href="#">
+            <a className="hover:text-on-surface-variant " href="#">
               Terms of Service
             </a>{' '}
             and{' '}
-            <a className="hover:text-on-surface-variant underline" href="#">
+            <a className="hover:text-on-surface-variant " href="#">
               Privacy Policy
             </a>
             .

@@ -11,10 +11,10 @@ const SignUpBrandPanel = () => (
         </span>
       </div>
       <h1 className="font-headline-xl text-headline-xl mb-stack-md leading-tight">
-        Chart Your Engineering Future.
+        Build the Engineering Career You Dream Of
       </h1>
       <p className="font-body-lg text-body-lg opacity-80 mb-stack-lg">
-        Join 10,000+ technical leaders using data-driven insights to accelerate their career trajectory from IC to Executive.
+        Continue learning, practicing, and growing with your personalized roadmap.
       </p>
       <div className="flex flex-col gap-gutter">
         <div className="flex items-center gap-stack-md">
@@ -27,13 +27,13 @@ const SignUpBrandPanel = () => (
           <div className="w-10 h-10 rounded-full bg-on-primary/10 flex items-center justify-center">
             <span className="material-symbols-outlined text-on-primary">insights</span>
           </div>
-          <p className="font-label-md text-label-md">Real-time Market Salary Benchmarks</p>
+          <p className="font-label-md text-label-md">Track Your Progress</p>
         </div>
         <div className="flex items-center gap-stack-md">
           <div className="w-10 h-10 rounded-full bg-on-primary/10 flex items-center justify-center">
             <span className="material-symbols-outlined text-on-primary">groups</span>
           </div>
-          <p className="font-label-md text-label-md">Exclusive Tech Leadership Circles</p>
+          <p className="font-label-md text-label-md">Learning Intelligence</p>
         </div>
       </div>
     </div>

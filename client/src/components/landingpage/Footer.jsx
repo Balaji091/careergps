@@ -19,7 +19,7 @@ const Footer = () => {
           <a className="text-xs font-label-md text-on-surface-variant hover:text-primary" href="#">LinkedIn</a>
           <a className="text-xs font-label-md text-on-surface-variant hover:text-primary" href="#">X / Twitter</a>
         </div>
-        <p className="text-[11px] text-outline font-label-sm">© 2024 Career GPS Inc. All rights reserved.</p>
+        <p className="text-[11px] text-outline font-label-sm">© 2026 Career GPS Inc. All rights reserved.</p>
       </div>
     </footer>
   );
