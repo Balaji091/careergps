@@ -168,6 +168,11 @@ const callLLMWithRetryAndFallback = async (messages, expectJson = true) => {
   throw new Error('All configured LLM providers failed or no API keys were configured.');
 };
 
+const isCodingOrITDomain = (value = '') => {
+  const text = value.toLowerCase();
+  return /(software|developer|development|engineer|frontend|front-end|backend|back-end|full stack|fullstack|programmer|coding|data engineer|devops|cloud|cyber|security engineer|qa|sre|database|web|mobile|android|ios|react|node|python|java|javascript|kubernetes|docker|api|machine learning|ml engineer|ai engineer)/.test(text);
+};
+
 /**
  * GENERATE CAREER ROADMAP
  */
@@ -177,6 +182,7 @@ export const generateRoadmap = async (role, level, timeline, dailyHours) => {
   // Provide specific subject guides depending on the selected role to align with user expectations
   let subjectGuides = '';
   const lowerRole = role?.toLowerCase() || '';
+  const isCodingRole = isCodingOrITDomain(role);
   if (lowerRole.includes('full stack') || lowerRole.includes('fullstack')) {
     subjectGuides = `For a Full Stack Developer, do NOT group HTML, CSS, JavaScript, and React together as simple topics under a single subject. Instead, make them separate subjects. Generate subjects like:
 1. HTML & CSS Layouts (Lessons: HTML5 Semantics, CSS Layouts, CSS Responsive Design)
@@ -233,21 +239,25 @@ export const generateRoadmap = async (role, level, timeline, dailyHours) => {
 7. Data Ingestion & Streaming (Kafka) (Lessons: Kafka Producers & Consumers, Kafka Topics & Partitions, Spark/Flink Streaming Integration)
 8. Cloud Data Engineering (Lessons: Cloud Data Warehouses, Identity & Security, Data Governance & Testing)`;
   } else {
-    subjectGuides = `For a ${role}, make sure to generate progressive subjects that break down the field into specific conceptual modules rather than mixing all technologies together. Group topics under logical concept-based lessons.`;
+    subjectGuides = `For a ${role}, generate a role-specific professional curriculum. Use the actual domain of the role, such as strategy, communication, tools, workflows, industry knowledge, portfolio work, metrics, stakeholder management, ethics, regulations, and practical deliverables. Do not force software engineering, programming, DSA, system design, APIs, databases, Git, or coding topics unless the role explicitly requires them.`;
   }
+
+  const domainInstructions = isCodingRole
+    ? `This is a coding/IT-adjacent role. Include coding, architecture, tooling, debugging, deployment, and technical interview practice only where they are genuinely relevant to the role.`
+    : `This is NOT a coding/IT role. The curriculum must match the selected role's real-world responsibilities and course domain. Do NOT include code snippets, programming projects, DSA, software architecture, APIs, databases, Git, DevOps, system design, technical interviewer wording, or coding objectives. Projects should be role-appropriate deliverables such as reports, campaigns, case studies, portfolios, audits, presentations, SOPs, research briefs, negotiation plans, financial models, lesson plans, design systems, or operational playbooks.`;
 
   try {
     const systemPrompt = `You are a world-class education curriculum director and career planner.
 Generate a structured, highly comprehensive, and progressive learning roadmap for a ${level} level "${role}" target role to be completed in EXACTLY ${totalDays} days, studying ${dailyHours} hours per day.
 
 CRITICAL INSTRUCTIONS:
-1. The curriculum MUST contain important topics, core foundations, language internals, design patterns, architecture principles, security, and advanced concepts.
+1. The curriculum MUST contain important topics, core foundations, practical workflows, domain principles, tools, quality standards, ethics, and advanced concepts appropriate to "${role}". ${domainInstructions}
 2. Progressive Subjects: Generate between 8 to 12 progressive, comprehensive subjects/modules to cover the domain exhaustively. ${subjectGuides}
 3. Highly Granular & Deep Topics:
    - Each subject must contain between 8 to 12 highly focused, granular topics to ensure maximum depth (yielding 80 to 120 topics across the entire roadmap). The curriculum must be extremely comprehensive so the student can master the role completely.
    - Do NOT group unrelated or broad concepts into a single topic. Break them down into specific conceptual units (e.g. instead of a broad topic "CSS Layouts", generate individual topics like "Flexbox Flex-Grow & Alignment Properties", "CSS Grid Template Areas", "Positioning Contexts & Z-Index").
-4. Lesson Module Groupings: A subject must be divided into exactly 3 to 4 logical, concept-focused lesson modules (representing structured learning units). Multiple topics MUST share the exact same "lessonName" to be grouped under that lesson. Do NOT create a single generic lesson name (like "General Fundamentals") for all topics, and do NOT put topics of unrelated technologies under the same lesson. For instance, if the subject is "React.js Essentials", the lessons should be "JSX & Components Lifecycle", "React State & Core Hooks", and "Advanced React Hook Performance". Topics inside each lesson must be progressive, ordered from basic concept to advanced usage, covering core questions frequently asked by technical interviewers.
-5. The LAST topic of every subject MUST be a project-based module (e.g. "Hands-on Project: Build an E-commerce Cart") detailing concrete project objectives.
+4. Lesson Module Groupings: A subject must be divided into exactly 3 to 4 logical, concept-focused lesson modules (representing structured learning units). Multiple topics MUST share the exact same "lessonName" to be grouped under that lesson. Do NOT create a single generic lesson name (like "General Fundamentals") for all topics, and do NOT put topics from unrelated domains under the same lesson. Topics inside each lesson must be progressive, ordered from basic concept to advanced application, covering role-relevant assessment or interview questions.
+5. The LAST topic of every subject MUST be a project-based module detailing concrete project objectives. For non-coding roles, the project MUST be a role-specific deliverable, not an app, codebase, or software project.
 6. Duration/Time Matching, Splitting & Smart Allocation:
    - The user has committed to studying ${dailyHours} hours per day for a total of ${totalDays} days.
    - Split this daily time budget as follows:
@@ -257,8 +267,8 @@ CRITICAL INSTRUCTIONS:
    - Subject Days Distribution: The total days of all subjects combined must sum up EXACTLY to ${totalDays} days. Do NOT distribute days equally (e.g., do not give 23 days to all subjects). Allocate days realistically based on complexity: simple introductory subjects (like basic layout syntax or version control) should take only 4 to 8 days, while core advanced subjects (like React internals, databases, system design) should take 15 to 25 days.
    - Topic Hours Allocation: Allocate estimatedHours realistically based on concept complexity:
      * Simple/fundamental topics (syntax, basic concepts) should take only 1 to 2 hours of concept learning.
-     * Complex core concepts (advanced internals, design patterns, transaction isolation) should be allocated 4 to 8 hours. If a topic has >= 6 hours, you MUST add deep conceptual details and specific hands-on coding objectives to its "learningObjectives" (e.g. "Build a thread-safe connection pool from scratch", "Implement custom debounce and throttle wrappers") so the student has sufficient material to justify the time.
-     * Hands-on Capstone Projects (the last topic in each subject module) must be allocated the largest portion of hours (e.g., 10 to 18 hours) to build, test, and deploy a comprehensive application.
+     * Complex core concepts should be allocated 4 to 8 hours. If a topic has >= 6 hours, you MUST add deep conceptual details and specific hands-on objectives appropriate to "${role}" so the student has sufficient material to justify the time.
+     * Hands-on Capstone Projects (the last topic in each subject module) must be allocated the largest portion of hours (e.g., 10 to 18 hours) to plan, create, test, present, and refine a comprehensive role-specific deliverable.
    - You must distribute the estimatedHours across topics such that their grand total matches exactly ${Math.round(totalDays * dailyHours * 0.6)} hours. This mathematical equality is extremely strict and critical.
 7. Your output MUST be a valid JSON object matching the following structure:
 {
@@ -370,22 +380,27 @@ Return ONLY the JSON payload. Do not include markdown codeblocks or wrapper form
  */
 export const generateLearnContent = async (topicName, subjectName, experienceLevel) => {
   try {
-    const systemPrompt = `You are an expert technical instructor teaching a course on "${subjectName}".
+    const isCodingSubject = isCodingOrITDomain(`${subjectName} ${topicName}`);
+    const contentMode = isCodingSubject
+      ? `This is a coding/IT-adjacent topic. Include code snippets only when they directly teach the topic.`
+      : `This is a non-coding course topic. Do NOT include code snippets, programming syntax, software architecture, APIs, databases, debugging, or developer-only framing. Use role-specific examples, workflows, templates, checklists, scenarios, and deliverables instead.`;
+
+    const systemPrompt = `You are an expert instructor teaching a course on "${subjectName}".
 Generate comprehensive, production-grade educational learn content for the topic "${topicName}" tailored for a "${experienceLevel}" level learner.
 
-Ensure the content is highly detailed and clear. The "detailedExplanation" must contain complete structural details, code snippets, architectural explanations, and step-by-step guides using rich Markdown.
+Ensure the content is highly detailed and clear. The "detailedExplanation" must contain complete structural details, practical explanations, and step-by-step guides using rich Markdown. ${contentMode}
 
 CRITICAL CONTENT INSTRUCTIONS:
 - The explanation must be written in a highly narrative, engaging, story-based format.
-- Use a relatable engineering scenario, case study, or system debugging story (e.g., "The Case of the Leaky Connection Pool") to anchor the concepts.
+- Use a relatable role-specific scenario or case study to anchor the concepts.
 - Use strong analogies, metaphors, and clear step-by-step breakdowns rather than dry documentation.
-- Provide concrete, production-grade code examples with comments.
+- For coding/IT topics, provide concrete code examples only when useful. For non-coding topics, provide concrete templates, examples, decision checklists, exercises, or deliverable outlines instead of code.
 
 Your response MUST be a JSON object with this structure:
 {
   "definition": "Clear, concise definition of the concept.",
-  "detailedExplanation": "A detailed, step-by-step technical breakdown of the concept in Markdown formatting. Include code examples, mechanisms, design patterns, pros/cons, and best practices.",
-  "realWorldExample": "An engaging real-world system analogy or production code example illustrating the topic.",
+  "detailedExplanation": "A detailed, step-by-step breakdown of the concept in Markdown formatting. Include relevant mechanisms, pros/cons, examples, and best practices.",
+  "realWorldExample": "An engaging real-world analogy or practical example illustrating the topic.",
   "useCases": ["Why we use it in production", "Specific production scenario 1", "Specific production scenario 2"],
   "commonMistakes": ["Detail on mistake 1 and how to avoid it", "Detail on mistake 2 and how to avoid it"],
   "interviewTips": ["Key points that interviewers focus on", "How to approach answering questions about this topic"],
@@ -397,7 +412,7 @@ Since this is JSON mode, all double quotes inside the JSON string values (especi
 Return ONLY JSON. Do not wrap in markdown tags.`;
 
     const messages = [
-      { role: 'system', content: 'You are a technical instructor that outputs JSON ONLY.' },
+      { role: 'system', content: 'You are an expert instructor that outputs JSON ONLY.' },
       { role: 'user', content: systemPrompt }
     ];
 
@@ -465,8 +480,12 @@ Format:
  */
 export const generateInterviewQuestions = async (topicName, subjectName) => {
   try {
-    const prompt = `Generate exactly 3 typical technical interview questions for the topic "${topicName}" in "${subjectName}".
-The questions should challenge the candidate's core coding skills, architectural trade-offs, and practical debugging capabilities.
+    const isCodingSubject = isCodingOrITDomain(`${subjectName} ${topicName}`);
+    const questionStyle = isCodingSubject
+      ? 'The questions should challenge core coding skills, architectural trade-offs, and practical debugging capabilities.'
+      : 'The questions should challenge role-specific judgment, communication, decision-making, applied workflows, ethics, metrics, and practical scenario handling. Do not ask coding, debugging, DSA, API, database, or software architecture questions.';
+    const prompt = `Generate exactly 3 typical interview or assessment questions for the topic "${topicName}" in "${subjectName}".
+${questionStyle}
 Return a JSON object:
 {
   "questions": [
@@ -567,13 +586,19 @@ Return only valid JSON.`;
  */
 export const evaluateInterviewAnswer = async ({ topicName, question, answer }) => {
   try {
-    const prompt = `Evaluate this mock interview answer for the topic "${topicName}".
+    const isCodingTopic = isCodingOrITDomain(topicName);
+    const evaluationStyle = isCodingTopic
+      ? 'Evaluate technical accuracy, trade-offs, edge cases, implementation constraints, and practical examples.'
+      : 'Evaluate role-specific accuracy, clarity, judgment, stakeholder awareness, ethics, metrics, practical examples, and communication quality. Do not expect code, algorithms, APIs, databases, or software architecture unless the question explicitly asks for them.';
+    const prompt = `Evaluate this mock interview or assessment answer for the topic "${topicName}".
 
 Question:
 ${question}
 
 Candidate answer:
 ${answer}
+
+${evaluationStyle}
 
 Return ONLY valid JSON:
 {
@@ -585,7 +610,7 @@ Return ONLY valid JSON:
 }`;
 
     const messages = [
-      { role: 'system', content: 'You are a senior technical interviewer that outputs JSON.' },
+      { role: 'system', content: 'You are a senior role-specific interviewer and evaluator that outputs JSON.' },
       { role: 'user', content: prompt }
     ];
 
@@ -678,7 +703,12 @@ export const generateLinkedInPost = async (type, topicName, noteContent) => {
  */
 export const generateTopicTutorResponse = async (topicName, userMessage, learnContent) => {
   try {
-    const prompt = `You are a world-class technical mentor and coding tutor helping a student master "${topicName}".
+    const learnContextText = typeof learnContent === 'string' ? learnContent : JSON.stringify(learnContent || {});
+    const isCodingTopic = isCodingOrITDomain(`${topicName} ${learnContextText}`);
+    const responseMode = isCodingTopic
+      ? 'For coding/IT topics, include clean, commented code snippets only when the user asks for implementation or when code is essential.'
+      : 'This appears to be a non-coding course topic. Do NOT include code snippets, programming syntax, debugging steps, APIs, databases, or software-engineering framing. Use practical role-specific examples, checklists, templates, case studies, and exercises.';
+    const prompt = `You are a world-class course tutor helping a student master "${topicName}".
 Below is the cached learning content context for reference:
 ---
 ${learnContent}
@@ -688,7 +718,7 @@ The student's message is: "${userMessage}"
 
 CRITICAL INSTRUCTIONS:
 1. GREETINGS: If the student's message is a greeting (e.g. "hi", "hello", "hey", "good morning"), greet them warmly and ask them what questions they have about "${topicName}". Do NOT explain the entire topic from scratch, and do NOT include any quiz or question. Keep it brief.
-2. ANSWERING QUESTIONS: If the student asks a question about "${topicName}" (e.g., "what is it?", "explain the code", "how do I use X?"), answer their question directly, thoroughly, and clearly. Format your response in a ChatGPT-style structural breakdown: use bold markdown headings, numbered steps, bulleted key points, and clean, commented code snippets. Make it highly conceptual yet easy to digest.
+2. ANSWERING QUESTIONS: If the student asks a question about "${topicName}" (e.g., "what is it?", "explain this", "how do I use X?"), answer their question directly, thoroughly, and clearly. Format your response in a ChatGPT-style structural breakdown: use bold markdown headings, numbered steps, and bulleted key points. ${responseMode}
 3. QUIZ REGULATION: Only if the student's message explicitly and directly requests a quiz, test, or review question (e.g., "give me a quiz", "test me", "give me a question"), you must append an interactive multiple-choice quiz question at the end of your explanation.
 If they do not explicitly request a quiz, test, or question, DO NOT output any :::quiz block.
 
@@ -711,7 +741,7 @@ If you generate a quiz, it MUST be structured in this exact JSON format enclosed
 Format your text response (except the quiz block) using rich markdown (headers, bold, lists, and code blocks).`;
 
     const messages = [
-      { role: 'system', content: 'You are a technical coding instructor. Return clear, concise markdown explanations. Do not generate a quiz unless the user explicitly requests one.' },
+      { role: 'system', content: 'You are an expert course tutor. Return clear, concise markdown explanations. Do not generate a quiz unless the user explicitly requests one.' },
       { role: 'user', content: prompt }
     ];
 
@@ -727,10 +757,14 @@ Format your text response (except the quiz block) using rich markdown (headers, 
  */
 export const generateTopicQuizQuestions = async (topicName, subjectName, experienceLevel) => {
   try {
-    const prompt = `You are an elite software engineering interviewer and technical assessor.
-Generate exactly 5 challenging multiple-choice questions (MCQs) for the topic "${topicName}" within the course "${subjectName}", tailored for a "${experienceLevel}" level developer.
+    const isCodingSubject = isCodingOrITDomain(`${subjectName} ${topicName}`);
+    const assessmentMode = isCodingSubject
+      ? 'Each question must test deep conceptual understanding, syntax edge cases, performance trade-offs, or error scenarios.'
+      : 'Each question must test deep conceptual understanding, role-specific scenarios, decision trade-offs, professional judgment, terminology, metrics, and practical application. Do not include coding, syntax, DSA, API, database, debugging, or software architecture questions.';
+    const prompt = `You are an elite course assessment writer.
+Generate exactly 5 challenging multiple-choice questions (MCQs) for the topic "${topicName}" within the course "${subjectName}", tailored for a "${experienceLevel}" level learner.
 
-Each question must test deep conceptual understanding, syntax edge cases, performance trade-offs, or error scenarios.
+${assessmentMode}
 
 Your response MUST be a JSON object with this exact structure:
 {

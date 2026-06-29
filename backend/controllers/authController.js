@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Streak from '../models/Streak.js';
 import Analytics from '../models/Analytics.js';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService.js';
+import { OAuth2Client } from 'google-auth-library';
 
 // JWT Generation
 const generateToken = (id) => {
@@ -73,6 +74,10 @@ export const loginUser = async (req, res) => {
   try {
     const user = await User.findOne({ email });
 
+    if (user && !user.password) {
+      return res.status(401).json({ message: 'This account uses Google sign-in. Please continue with Google.' });
+    }
+
     if (user && (await user.matchPassword(password))) {
       if (!user.isVerified) {
         return res.status(401).json({ message: 'Please verify your email address before logging in' });
@@ -108,6 +113,93 @@ export const loginUser = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Google OAuth Sign-In
+export const googleAuth = async (req, res) => {
+  const { credential } = req.body;
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+  if (!credential) {
+    return res.status(400).json({ message: 'Google credential is required' });
+  }
+
+  if (!googleClientId) {
+    return res.status(500).json({ message: 'Google sign-in is not configured on the server' });
+  }
+
+  try {
+    const googleClient = new OAuth2Client(googleClientId);
+
+    // Verify the Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Find existing user by googleId or email
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (user) {
+      // Link Google account if user exists but hasn't linked Google yet
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.authProvider = user.password ? user.authProvider : 'google';
+      }
+      if (picture && !user.profile?.avatar) {
+        user.profile = user.profile || {};
+        user.profile.avatar = picture;
+      }
+    } else {
+      // Create new user from Google data
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        authProvider: 'google',
+        isVerified: true,
+        profile: { avatar: picture || '' },
+      });
+
+      // Create related models
+      await Streak.create({ user: user._id });
+      await Analytics.create({ user: user._id });
+    }
+
+    // Ensure verified
+    if (!user.isVerified) {
+      user.isVerified = true;
+    }
+
+    const accessToken = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profile: user.profile,
+      xp: user.xp,
+      level: user.level,
+      accessToken,
+    });
+  } catch (error) {
+    console.error('Google auth error:', error.message);
+    res.status(401).json({ message: 'Google authentication failed. Please try again.' });
   }
 };
 
