@@ -1,6 +1,7 @@
 import React from 'react';
 
 const SyllabusSection = ({
+  addingTask,
   getTaskDescription,
   handleAddCustomTask,
   handleDeleteTask,
@@ -24,9 +25,9 @@ const SyllabusSection = ({
         className="flex-1 min-w-0 bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 sm:px-4 py-2.5 text-xs sm:text-sm outline-none focus:border-primary/50 text-on-surface"
         required
       />
-      <button type="submit" className="px-3 sm:px-5 py-2.5 bg-primary text-white rounded-lg font-label-md text-xs sm:text-label-md font-bold hover:bg-primary-container transition-all active:scale-95 flex items-center gap-1 cursor-pointer">
+      <button type="submit" disabled={addingTask} className="px-3 sm:px-5 py-2.5 bg-primary text-white rounded-lg font-label-md text-xs sm:text-label-md font-bold hover:bg-primary-container transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-300">
         <span className="material-symbols-outlined text-[16px]">add</span>
-        <span>Add</span>
+        <span>{addingTask ? 'Adding...' : 'Add'}</span>
       </button>
     </form>
     <div className="space-y-3">

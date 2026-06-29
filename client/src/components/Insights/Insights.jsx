@@ -254,7 +254,7 @@ const Insights = () => {
 
   const handleDrillSubmit = async (e) => {
     e.preventDefault();
-    if (!drillAnswer.trim()) return;
+    if (drillSuccess || !drillAnswer.trim()) return;
 
     setDrillSuccess(true);
     setDrillEvaluation(null);

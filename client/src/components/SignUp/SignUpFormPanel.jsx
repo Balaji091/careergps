@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import GoogleSignInButton from '../GoogleSignInButton';
 
 const SignUpFormPanel = ({
   colors,
@@ -9,6 +10,8 @@ const SignUpFormPanel = ({
   formData,
   handleBlur,
   handleChange,
+  handleGoogleError,
+  handleGoogleSuccess,
   handleMouseMove,
   handleSubmit,
   loading,
@@ -53,6 +56,20 @@ const SignUpFormPanel = ({
             <span>{error}</span>
           </div>
         )}
+      </div>
+
+      <div className="mb-stack-md space-y-3">
+        <GoogleSignInButton
+          disabled={loading}
+          onError={handleGoogleError}
+          onSuccess={handleGoogleSuccess}
+          text="signup_with"
+        />
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-outline-variant/50" />
+          <span className="text-[11px] font-bold uppercase text-outline">or</span>
+          <span className="h-px flex-1 bg-outline-variant/50" />
+        </div>
       </div>
 
       {/* Form */}

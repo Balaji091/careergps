@@ -1,11 +1,12 @@
 import React, { useState, useRef, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useContext(AuthContext);
+  const { login, googleLogin } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,6 +33,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError('');
     setLoading(true);
     try {
@@ -45,6 +47,24 @@ const Login = () => {
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.message || 'Invalid email or password. Please try again.');
+    }
+  };
+
+  const handleGoogleSuccess = async (credential) => {
+    if (loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      const userData = await googleLogin(credential);
+      if (userData.profile?.targetRole) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding/role');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,7 +95,7 @@ const Login = () => {
             </div>
             <div className="flex items-center gap-stack-md">
               <div className="w-10 h-10 rounded-full bg-on-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary">insights</span>
+         x         <span className="material-symbols-outlined text-on-primary">insights</span>
               </div>
               <p className="font-label-md text-label-md">Track Your Progress</p>
             </div>
@@ -125,6 +145,20 @@ const Login = () => {
                 <span>{error}</span>
               </div>
             )}
+          </div>
+
+          <div className="mb-stack-md space-y-3">
+            <GoogleSignInButton
+              disabled={loading}
+              onError={setError}
+              onSuccess={handleGoogleSuccess}
+              text="signin_with"
+            />
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-outline-variant/50" />
+              <span className="text-[11px] font-bold uppercase text-outline">or</span>
+              <span className="h-px flex-1 bg-outline-variant/50" />
+            </div>
           </div>
 
           {/* Form */}

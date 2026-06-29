@@ -26,6 +26,7 @@ const Planner = () => {
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState(null);
   const [newTaskName, setNewTaskName] = useState('');
+  const [addingTask, setAddingTask] = useState(false);
 
   // Spaced Repetition (Active Recall) State
   const [recallIndex, setRecallIndex] = useState(0);
@@ -105,8 +106,9 @@ const Planner = () => {
 
   const handleAddCustomTask = async (e) => {
     e.preventDefault();
-    if (!newTaskName.trim()) return;
+    if (addingTask || !newTaskName.trim()) return;
 
+    setAddingTask(true);
     try {
       const res = await api.post('/planner', {
         name: newTaskName,
@@ -118,6 +120,8 @@ const Planner = () => {
     } catch (err) {
       console.error(err);
       triggerToast('Failed to add custom task.');
+    } finally {
+      setAddingTask(false);
     }
   };
 
@@ -218,6 +222,7 @@ const Planner = () => {
 
   const handleDrillSubmit = async (e) => {
     e.preventDefault();
+    if (drillSubmitted) return;
     setDrillSubmitted(true);
     setDrillEvaluation(null);
 
@@ -334,6 +339,7 @@ const Planner = () => {
         <SyllabusSection
           getTaskDescription={getTaskDescription}
           handleAddCustomTask={handleAddCustomTask}
+          addingTask={addingTask}
           handleDeleteTask={handleDeleteTask}
           handleToggleTask={handleToggleTask}
           newTaskName={newTaskName}

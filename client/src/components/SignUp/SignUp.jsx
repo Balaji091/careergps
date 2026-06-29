@@ -1,5 +1,5 @@
 import React, { useState, useRef, useContext, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { getPasswordStrength, isValidEmail, passwordStrengthColorMap } from '../../utils';
 import SignUpBrandPanel from './SignUpBrandPanel';
@@ -8,7 +8,7 @@ import SignUpFormPanel from './SignUpFormPanel';
 /* ─── Password Strength Engine ─── */
 const SignUp = () => {
   const navigate = useNavigate();
-  const { register } = useContext(AuthContext);
+  const { register, googleLogin } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -55,6 +55,7 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
 
     // Client-side validation
     if (formData.name.trim().length < 2) {
@@ -90,6 +91,24 @@ const SignUp = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credential) => {
+    if (loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      const userData = await googleLogin(credential);
+      if (userData.profile?.targetRole) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding/role');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google sign-up failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-background text-on-background min-h-screen flex flex-col md:flex-row overflow-x-hidden font-sans">
       <SignUpBrandPanel />
@@ -102,6 +121,8 @@ const SignUp = () => {
         handleBlur={handleBlur}
         handleChange={handleChange}
         handleMouseMove={handleMouseMove}
+        handleGoogleError={setError}
+        handleGoogleSuccess={handleGoogleSuccess}
         handleSubmit={handleSubmit}
         loading={loading}
         mainRef={mainRef}

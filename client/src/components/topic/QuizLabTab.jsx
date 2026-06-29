@@ -148,6 +148,7 @@ const QuizLabTab = ({
   quizQuestions,
   quizCompleted,
   quizSubmitted,
+  quizSubmitting,
   quizScore,
   quizPassed,
   currentQuizIndex,
@@ -277,10 +278,10 @@ const QuizLabTab = ({
                 {currentQuizIndex === quizQuestions.length - 1 ? (
                   <button
                     onClick={handleSubmitQuiz}
-                    disabled={answeredCount < quizQuestions.length}
+                    disabled={quizSubmitting || answeredCount < quizQuestions.length}
                     className="cursor-pointer rounded-lg bg-primary px-6 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-primary-container active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
-                    Submit Quiz
+                    {quizSubmitting ? 'Submitting...' : 'Submit Quiz'}
                   </button>
                 ) : (
                   <span className="text-[9px] font-bold uppercase text-on-surface-variant/60 sm:text-[10px]">

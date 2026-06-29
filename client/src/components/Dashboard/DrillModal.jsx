@@ -42,8 +42,8 @@ const DrillModal = ({
             <button type="button" onClick={onClose} className="px-5 py-2.5 border border-outline-variant/30 rounded-xl font-label-md font-bold hover:bg-surface-container-high transition-all cursor-pointer text-sm">
               Cancel
             </button>
-            <button type="submit" disabled={drillSuccess} className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold hover:bg-primary-container transition-all active:scale-95 shadow-md cursor-pointer text-sm">
-              Submit Drill Response
+            <button type="submit" disabled={drillSuccess} className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold hover:bg-primary-container transition-all active:scale-95 shadow-md cursor-pointer text-sm disabled:cursor-not-allowed disabled:bg-slate-400">
+              {drillSuccess ? 'Submitting...' : 'Submit Drill Response'}
             </button>
           </div>
         </form>

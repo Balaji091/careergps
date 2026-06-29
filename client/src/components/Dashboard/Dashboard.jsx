@@ -122,7 +122,7 @@ const Dashboard = () => {
 
   const handleDrillSubmit = async (e) => {
     e.preventDefault();
-    if (!drillAnswer.trim()) return;
+    if (drillSuccess || !drillAnswer.trim()) return;
     setDrillSuccess(true);
     try {
       const focusTitle = focusAreas[0]?.title || 'System Architecture';

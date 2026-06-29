@@ -221,6 +221,7 @@ const Topic = () => {
   const [selectedQuizOption, setSelectedQuizOption] = useState(null);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [quizPassed, setQuizPassed] = useState(false);
@@ -542,6 +543,8 @@ const Topic = () => {
   };
 
   const handleSubmitQuiz = async () => {
+    if (quizSubmitting || Object.keys(quizAnswers).length < quizQuestions.length) return;
+    setQuizSubmitting(true);
     try {
       const res = await api.post(`/roadmap/topic/${topicId}/quiz/submit`, { answers: quizAnswers });
       setQuizScore(res.data.score);
@@ -564,6 +567,8 @@ const Topic = () => {
     } catch (err) {
       console.error(err);
       triggerToast('Failed to submit quiz.');
+    } finally {
+      setQuizSubmitting(false);
     }
   };
 
@@ -572,6 +577,7 @@ const Topic = () => {
     setSelectedQuizOption(null);
     setQuizAnswers({});
     setQuizSubmitted(false);
+    setQuizSubmitting(false);
     setQuizCompleted(false);
     setQuizScore(0);
     setQuizPassed(false);
@@ -712,6 +718,7 @@ const Topic = () => {
               quizQuestions={quizQuestions}
               quizCompleted={quizCompleted}
               quizSubmitted={quizSubmitted}
+              quizSubmitting={quizSubmitting}
               quizScore={quizScore}
               quizPassed={quizPassed}
               currentQuizIndex={currentQuizIndex}

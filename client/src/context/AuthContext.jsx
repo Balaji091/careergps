@@ -59,6 +59,20 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  // Google Login
+  const googleLogin = async (credential) => {
+    const res = await api.post('/auth/google', { credential });
+    const { accessToken, refreshToken, ...userData } = res.data;
+    
+    localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    
+    setUser(userData);
+    return userData;
+  };
+
   // Logout
   const logout = async () => {
     try {
@@ -98,6 +112,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         register,
         login,
+        googleLogin,
         logout,
         updateProfile,
         setUser,
