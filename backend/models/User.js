@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
   name: {
     type: String,
     required: true,
@@ -62,7 +63,8 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 1,
   },
-}, {
+},
+ {
   timestamps: true,
 });
 
